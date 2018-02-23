@@ -3,6 +3,13 @@
 ![forest](logo.png)
 
 Simple RESTFul Server
+这是一个新物种包内置 socket通讯、HTTP解析、类似Spring Boot的功能、简易JSON解析器、关系型数据库ORM等，使其能用最简洁的代码实现RESTful风格提供服务（暂仅供学习交流）
+
+### Example
+
+Create Maven "maven-archetype-quickstart" Project
+
+Add
 
 ```
 <dependency>
@@ -12,7 +19,8 @@ Simple RESTFul Server
 </dependency>
 ```
 
-### Example
+
+Create `App.java`
 
 ```
 import com.denghb.restful.Application;
@@ -34,8 +42,13 @@ public class App {
 }
  ```
 
-Run `App.java` Open Browser [http://localhost:8888](http://localhost:8888)
-
+Main Run `App.java` Open Browser [http://localhost:8888](http://localhost:8888)
 
 
 more [simple-restful-server](https://github.com/deng-hb/simple-restful-server)
+
+
+👏意见反馈 [issues](https://github.com/deng-hb/forest/issues)
+
+
+

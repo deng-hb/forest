@@ -2,7 +2,6 @@ package com.denghb.restful;
 
 
 import com.denghb.eorm.Eorm;
-import com.denghb.eorm.impl.EormMySQLImpl;
 import com.denghb.json.JSON;
 import com.denghb.restful.annotation.*;
 import com.denghb.restful.annotation.Error;
@@ -104,6 +103,7 @@ public class Application {
                     // 文件匹配
                     URL url = this.getClass().getResource("/static" + uri);
                     if (null == url && uri.equals("/favicon.ico")) {
+                        // 默认图标
                         url = this.getClass().getResource("/static/forest.ico");
                     }
                     if (null != url) {
@@ -225,13 +225,20 @@ public class Application {
         Object target = _OBJECT.get(clazz);
         if (null == target) {
             if (clazz == Eorm.class) {
-                // 数据库实例化
-                String url = ConfigUtils.getValue("db.url");
-                String username = ConfigUtils.getValue("db.username");
-                String password = ConfigUtils.getValue("db.password");
-                Eorm eorm = new EormMySQLImpl(url, username, password);
-                _OBJECT.put(clazz, eorm);
-                return eorm;
+                try {
+                    // 数据库实例化
+                    String impl = ConfigUtils.getValue("eorm.impl", "com.denghb.eorm.impl.EormMySQLImpl");
+                    String url = ConfigUtils.getValue("eorm.url");
+                    String username = ConfigUtils.getValue("eorm.username");
+                    String password = ConfigUtils.getValue("eorm.password");
+
+                    Class c = Class.forName(impl);
+                    Eorm eorm = (Eorm) ReflectUtils.constructorInstance(c, new Class[]{String.class, String.class, String.class}, new Object[]{url, username, password});
+                    _OBJECT.put(clazz, eorm);
+                    return eorm;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
 
             target = ReflectUtils.createInstance(clazz);

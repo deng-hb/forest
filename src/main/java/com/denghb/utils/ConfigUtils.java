@@ -12,7 +12,8 @@ import java.util.Properties;
 public class ConfigUtils {
 
 
-    private static String CONFIG_FILE = "restful.properties";
+    // 配置文件名称
+    private static String CONFIG_FILE = "forest.properties";
 
     private static Properties properties = new Properties();
 
@@ -59,6 +60,19 @@ public class ConfigUtils {
             e.printStackTrace();
         }
         return value;
+    }
+
+    public static String getValue(String name, String defaultValue) {
+
+
+        String value = null;
+
+        try {
+            value = properties.getProperty(name);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null == value ? defaultValue : value;
     }
 
     public static void main(String... args) {

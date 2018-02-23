@@ -28,7 +28,7 @@ public class EormMySQLImpl implements Eorm {
 
     private String password;
 
-    public EormMySQLImpl(Connection connection) {
+    private EormMySQLImpl(Connection connection) {
         this.connection = connection;
     }
 

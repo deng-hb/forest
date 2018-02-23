@@ -293,30 +293,30 @@ public class Server {
             String header = "";
             byte[] bytes = new byte[0];
 
-            if (body instanceof String) {
-                bytes = String.valueOf(body).getBytes();
-                type = "text/html";
-            } else if (body instanceof File) {
-
-                File file = (File) body;
-
-                String fileName = file.getAbsolutePath().toLowerCase();
-                if (fileName.endsWith("html")) {
+            try {
+                if (body instanceof String) {
+                    bytes = String.valueOf(body).getBytes();
                     type = "text/html";
-                } else if (fileName.endsWith("jpg") || fileName.endsWith("jpeg")) {
-                    type = "image/jpeg";
-                } else if (fileName.endsWith("js")) {
-                    type = "application/x-javascript";
-                } else if (fileName.endsWith("png")) {
-                    type = "image/png";
-                } else if (fileName.endsWith("gif")) {
-                    type = "image/gif";
-                } else if (fileName.endsWith("css")) {
-                    type = "text/css";
-                }
+                } else if (body instanceof File) {
 
-                FileInputStream fis = null;
-                try {
+                    File file = (File) body;
+
+                    String fileName = file.getAbsolutePath().toLowerCase();
+                    if (fileName.endsWith("html")) {
+                        type = "text/html";
+                    } else if (fileName.endsWith("jpg") || fileName.endsWith("jpeg")) {
+                        type = "image/jpeg";
+                    } else if (fileName.endsWith("js")) {
+                        type = "application/x-javascript";
+                    } else if (fileName.endsWith("png")) {
+                        type = "image/png";
+                    } else if (fileName.endsWith("gif")) {
+                        type = "image/gif";
+                    } else if (fileName.endsWith("css")) {
+                        type = "text/css";
+                    }
+
+                    FileInputStream fis = null;
                     fis = new FileInputStream(file);
                     ByteArrayOutputStream bos = new ByteArrayOutputStream();
 
@@ -329,12 +329,12 @@ public class Server {
                     }
 
                     bytes = bos.toByteArray();
-
-                } catch (Exception e) {
-                    e.printStackTrace();
+                } else {
+                    bytes = JSON.toJSON(body).getBytes();
                 }
-            } else {
-                bytes = JSON.toJSON(body).getBytes();
+            } catch (Exception e) {
+                e.printStackTrace();
+                code = 500;
             }
 
             // TODO

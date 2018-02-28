@@ -9,7 +9,8 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
- * JSON 解析器
+ * 对象 JSON 解析器
+ * TODO 基本类型、数组、某些格式的日期待完善
  */
 public class JSON {
 

@@ -82,6 +82,16 @@ public interface Eorm {
     public <T> T selectOne(Class<T> clazz, String sql, Object... args);
 
     /**
+     * 按主键查询一条记录
+     *
+     * @param clazz
+     * @param args
+     * @param <T>
+     * @return
+     */
+    public <T> T selectByPrimaryKey(Class<T> clazz, Object... args);
+
+    /**
      * 批量插入
      *
      * @param list

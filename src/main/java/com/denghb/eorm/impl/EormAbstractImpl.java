@@ -101,7 +101,6 @@ public abstract class EormAbstractImpl implements Eorm {
                     if (value instanceof Number) {
                         value = ReflectUtils.constructorInstance(clazz, String.class, String.valueOf(value));
                     }
-//                    clazz.is
                     list.add((T) value);
                 }
 
@@ -123,7 +122,7 @@ public abstract class EormAbstractImpl implements Eorm {
                         if (null == value) {
                             continue;
                         }
-                        
+
                         // 找到对应字段
                         for (Field field : fields) {
                             // 比较表字段名
@@ -265,6 +264,28 @@ public abstract class EormAbstractImpl implements Eorm {
         return null;
     }
 
+    public <T> T selectByPrimaryKey(Class<T> clazz, Object... args) {
+
+        // 表名
+        String tableName = EormUtils.getTableName(clazz);
+        StringBuilder sb = new StringBuilder("select * from ");
+        sb.append(tableName);
+        sb.append(" where ");
+
+        // 主键名
+        List<String> primaryKeyNames = EormUtils.getPrimaryKeyNames(clazz);
+        for (int i = 0; i < primaryKeyNames.size(); i++) {
+            if (i > 0) {
+                sb.append(" and ");
+            }
+            sb.append("`");
+            sb.append(primaryKeyNames.get(i));
+            sb.append("` = ?");
+        }
+
+        return selectOne(clazz, sb.toString(), args);
+    }
+
     private List<Map> buildMap(ResultSet rs, ResultSetMetaData data) throws SQLException {
 
         List<Map> list = new ArrayList<Map>();
@@ -273,7 +294,7 @@ public abstract class EormAbstractImpl implements Eorm {
 
         while (rs.next()) {
 
-            Map map = new HashMap();
+            Map<String, Object> map = new HashMap<String, Object>();
             for (int j = 1; j <= columnCount; j++) {
                 String columnName = data.getColumnName(j);
                 map.put(columnName, rs.getObject(columnName));

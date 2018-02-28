@@ -10,6 +10,7 @@ import com.denghb.utils.ReflectUtils;
 
 import java.io.File;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -32,7 +33,7 @@ public class Application {
      * <p>
      * <pre>
      * @GET("/user") -> <"GET/user",MethodInfo>
-     * @Filter("/") -> <"Filter/",MethodInfo>
+     * @Filter("/") -> <"Before/",MethodInfo>
      * </pre>
      */
     static Map<String, MethodInfo> _OBJECT_METHOD = new ConcurrentHashMap<String, MethodInfo>();
@@ -250,7 +251,7 @@ public class Application {
 
     private static Object handlerFilter(Server.Request request) {
         try {
-            String key = Filter.class.getSimpleName() + request.getMethod() + request.getUri();
+            String key = Before.class.getSimpleName() + request.getMethod() + request.getUri();
 
             Application.MethodInfo info = null;
             for (String key1 : _OBJECT_METHOD.keySet()) {
@@ -368,6 +369,24 @@ public class Application {
             if (null == rest) {
                 continue;
             }
+            Object target = getObject(c);
+            // 字段
+            Field[] fields = c.getDeclaredFields();
+            for (Field field : fields) {
+                Value value = field.getAnnotation(Value.class);
+                if (null != value) {
+                    String string = ConfigUtils.getValue(value.name());
+                    ReflectUtils.setFieldValue(field, target, string);
+                }
+                Autowired autowired = field.getAnnotation(Autowired.class);
+
+                if (null != autowired) {
+                    Object object = getObject(field.getType());
+                    ReflectUtils.setFieldValue(field, target, object);
+                }
+            }
+
+
             String url = rest.value();
             // 获取方法
             List<Method> methods = ReflectUtils.getAllMethods(c);
@@ -386,7 +405,10 @@ public class Application {
                 if (null != put) {
                     add(PUT.class.getSimpleName(), url + put.value(), new MethodInfo(c, method));
                 }
-
+                PATCH patch = method.getAnnotation(PATCH.class);
+                if (null != patch) {
+                    add(PATCH.class.getSimpleName(), url + patch.value(), new MethodInfo(c, method));
+                }
                 DELETE delete = method.getAnnotation(DELETE.class);
                 if (null != delete) {
                     add(DELETE.class.getSimpleName(), url + delete.value(), new MethodInfo(c, method));
@@ -397,14 +419,24 @@ public class Application {
                     add(Error.class.getSimpleName(), error.throwable().getSimpleName(), new MethodInfo(c, method));
                 }
 
-                Filter filter = method.getAnnotation(Filter.class);
-                if (null != filter) {
+                Before before = method.getAnnotation(Before.class);
+                if (null != before) {
 
-                    Class[] ms = filter.method();
+                    Class[] ms = before.methods();
                     for (Class cl : ms) {
                         // GET/*  POST/*
-                        String path = cl.getSimpleName() + filter.value();
-                        add(Filter.class.getSimpleName(), path, new MethodInfo(c, method));
+                        String path = cl.getSimpleName() + before.value();
+                        add(Before.class.getSimpleName(), path, new MethodInfo(c, method));
+                    }
+                }
+                After after = method.getAnnotation(After.class);
+                if (null != after) {
+
+                    Class[] ms = after.methods();
+                    for (Class cl : ms) {
+                        // GET/*  POST/*
+                        String path = cl.getSimpleName() + after.value();
+                        add(After.class.getSimpleName(), path, new MethodInfo(c, method));
                     }
                 }
             }

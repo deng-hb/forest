@@ -50,30 +50,47 @@ public class ConfigUtils {
      * @return
      */
     public static String getValue(String name) {
-
-
-        String value = null;
-
-        try {
-            value = properties.getProperty(name);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return value;
+        return getValue(name, null);
     }
 
     public static String getValue(String name, String defaultValue) {
 
+        StringBuilder sb = new StringBuilder();
 
-        String value = null;
+        String value = properties.getProperty(name);
 
-        try {
-            value = properties.getProperty(name);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null == value ? defaultValue : value;
+        buildValue(sb, value);
+
+        return sb.length() == 0 ? defaultValue : sb.toString();
     }
+
+    private static void buildValue(StringBuilder sb, String value) {
+
+        if (null == value) {
+            return;
+        }
+
+        int start = value.indexOf("${");
+        int end = value.indexOf("}");
+
+        if (start != -1 && start < end) {
+            // 前半截
+            sb.append(value.substring(0, start));
+
+            String name = value.substring(start + 2, end);
+
+            // 翻译属性
+            buildValue(sb, properties.getProperty(name));
+
+            value = value.substring(end + 1, value.length());
+            // 后半截
+            buildValue(sb, value);
+
+        } else {
+            sb.append(value);
+        }
+    }
+
 
     public static void main(String... args) {
         System.out.println(getValue("com.denghb.slf4j2elk.level"));

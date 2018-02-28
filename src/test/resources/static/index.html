@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="shortcut icon" href="/favicon.ico"/>
+</head>
+<body>
+<h2>hello world</h2>
+<img src="/images/520.gif"/>
+<script>
+//
+        var ws = new WebSocket("ws://localhost:8888/websocket");
+        ws.onopen = function(e) {
+            console.log("Connection open ...");
+            ws.send("Hello WebSocket Server!");
+        };
+        ws.onmessage = function(e) {
+            console.log( "Received Message: " + e.data);
+            ws.close();
+        };
+        ws.onclose = function(e) {
+            console.log("Connection closed.");
+        };
+        ws.onerror = function(e) {
+            console.log("Connection closed.");
+        };
+    </script>
+</body>
+</html>

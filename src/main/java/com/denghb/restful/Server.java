@@ -2,6 +2,7 @@ package com.denghb.restful;
 
 import com.denghb.json.JSON;
 import com.denghb.utils.ConfigUtils;
+import com.denghb.utils.LogUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -119,9 +120,12 @@ public class Server {
                         socketChannel.register(selector, SelectionKey.OP_READ);
                     }
                 } else if (key.isReadable()) {
+                    String message = null;
                     try {
                         SocketChannel socketChannel = (SocketChannel) key.channel();
-                        String message = receive(socketChannel);
+
+                        LogUtils.info(Server.class, socketChannel.socket().getInetAddress().toString());
+                        message = receive(socketChannel);
                         // 防止心跳包
                         if ("".equals(message)) {
                             continue;
@@ -262,8 +266,10 @@ public class Server {
 
     static class Response {
 
-        // 先默认都返回成功
-        private static final String RESPONSE_HTML = "HTTP/1.1 %s\r\nContent-Type: %s\r\nConnection: close\r\n\r\n";
+        // HTTP响应
+        private static final String RESPONSE_HTML = "HTTP/1.1 %s\r\nServer: Forest/1.0\r\nContent-Type: %s\r\nConnection: close\r\n\r\n";
+
+        private Map<String, String> headers = new HashMap<String, String>();
 
         private int code = 200;
 
@@ -281,6 +287,10 @@ public class Server {
 
         private Response(int code) {
             this.code = code;
+        }
+
+        public void addHeader(String key, String value) {
+            headers.put(key, value);
         }
 
         /**
@@ -343,6 +353,9 @@ public class Server {
                 case 200:
                     status = "200 OK";
                     break;
+                case 301:
+                    status = "301 Moved Permanently";
+                    break;
                 case 403:
                     status = "403 Forbidden";
                     break;
@@ -381,7 +394,7 @@ public class Server {
     }
 
     private static void buildParameter(Map<String, String> param, String p) {
-        if ("".equals(p)) {
+        if (null == p || "".equals(p.trim())) {
             return;
         }
 

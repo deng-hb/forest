@@ -1,4 +1,5 @@
-package com.denghb.restful.annotation;
+package com.denghb.forest.annotation;
+
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -6,10 +7,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 请求头
+ * RESTful 控制器
  */
-@Target(ElementType.PARAMETER)
+@Target(value = {ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface RequestHeader {
-    String value();
+@Service
+public @interface RESTful {
+
+    String value() default "";
+
 }

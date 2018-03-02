@@ -1,4 +1,4 @@
-package com.denghb.restful.annotation;
+package com.denghb.forest.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -6,12 +6,12 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 异常处理
+ * 获取配置属性值
  */
-@Target(ElementType.METHOD)
+@Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Error {
+public @interface Value {
 
-    Class throwable() default Exception.class;// 异常类
+    String name();
 
 }

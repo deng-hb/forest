@@ -1,4 +1,4 @@
-package com.denghb.utils;
+package com.denghb.log;
 
 /**
  * 日志工具类

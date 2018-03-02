@@ -18,7 +18,7 @@ public class EormUtils {
     /**
      * 默认主键名
      */
-    private final static String DEFAULT_PRIMATRY_KEY_NAME = "id";
+    private final static String DEFAULT_PRIMARY_KEY_NAME = "id";
 
     private final static String serialVersionUID = "serialVersionUID";
 
@@ -28,11 +28,11 @@ public class EormUtils {
         if (null == table) {
             return JdbcUtils.humpToUnderline(clazz.getSimpleName());
         }
-        StringBuffer tableName = new StringBuffer("`");
+        StringBuilder tableName = new StringBuilder("`");
         // 获取数据库名称
         String database = table.database();
 
-        if (null != database && database.trim().length() != 0) {
+        if (database.trim().length() != 0) {
             tableName.append(database);
             tableName.append("`.`");
         }
@@ -58,12 +58,11 @@ public class EormUtils {
             Ecolumn ecolumn = field.getAnnotation(Ecolumn.class);
             if (null != ecolumn && ecolumn.primaryKey()) {
                 primaryKeys.add(ecolumn.name());
-            } else {
-                if (DEFAULT_PRIMATRY_KEY_NAME.equals(field.getName())) {
-                    primaryKeys.add(field.getName());
-                }
             }
+        }
 
+        if (primaryKeys.isEmpty()) {
+            primaryKeys.add(DEFAULT_PRIMARY_KEY_NAME);
         }
 
         return primaryKeys;
@@ -103,7 +102,7 @@ public class EormUtils {
 
                 String columnName = field.getName();
                 columnName = JdbcUtils.humpToUnderline(columnName);
-                boolean isPrimaryKey = DEFAULT_PRIMATRY_KEY_NAME.equals(columnName);
+                boolean isPrimaryKey = DEFAULT_PRIMARY_KEY_NAME.equals(columnName);
                 if (isPrimaryKey) {
                     table.getAllPrimaryKeyFields().add(field);
                 }

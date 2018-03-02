@@ -97,7 +97,7 @@ public class EormSQLiteImpl extends EormAbstractImpl implements Eorm {
         return res;
     }
 
-    public <T> PagingResult<T> list(Class<T> clazz, StringBuffer sql, Paging paging) {
+    public <T> PagingResult<T> page(Class<T> clazz, StringBuffer sql, Paging paging) {
         PagingResult<T> result = new PagingResult<T>(paging);
 
         Object[] objects = paging.getParams().toArray();

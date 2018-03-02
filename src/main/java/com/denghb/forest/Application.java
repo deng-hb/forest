@@ -1,15 +1,21 @@
-package com.denghb.restful;
+package com.denghb.forest;
 
 
 import com.denghb.eorm.Eorm;
+import com.denghb.forest.annotation.*;
+import com.denghb.forest.server.Request;
+import com.denghb.forest.server.Response;
+import com.denghb.forest.server.Server;
+import com.denghb.forest.task.TaskManager;
 import com.denghb.json.JSON;
-import com.denghb.restful.annotation.*;
-import com.denghb.restful.annotation.Error;
 import com.denghb.utils.ConfigUtils;
 import com.denghb.utils.ReflectUtils;
 
 import java.io.File;
 import java.lang.annotation.Annotation;
+import java.lang.annotation.Documented;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -33,7 +39,7 @@ public class Application {
      * <p>
      * <pre>
      * @GET("/user") -> <"GET/user",MethodInfo>
-     * @Filter("/") -> <"Before/",MethodInfo>
+     * @Filter("/") -> <"Filter/",MethodInfo>
      * </pre>
      */
     static Map<String, MethodInfo> _OBJECT_METHOD = new ConcurrentHashMap<String, MethodInfo>();
@@ -64,11 +70,14 @@ public class Application {
 
     public static void run(Class clazz, String[] args) {
 
+        long start = System.currentTimeMillis();
+        System.out.println("Starting ...");
+
         init(clazz);
 
         // 在start之前
         _SERVER.setHandler(new Server.Handler() {
-            public Server.Response execute(Server.Request request) {
+            public Response execute(Request request) {
 
 
                 String uri = request.getUri();
@@ -76,7 +85,7 @@ public class Application {
                 // TODO 运行状态
                 if (uri.equals("/status")) {
 
-                    return Server.Response.build(_OBJECT_METHOD);
+                    return Response.build(_OBJECT_METHOD);
                 }
 
                 outLog(getClass(), "{}\t{}", request.getMethod(), uri);
@@ -84,7 +93,7 @@ public class Application {
                 // 过滤
                 Object object = handlerFilter(request);
                 if (null != object) {
-                    return Server.Response.build(object);
+                    return Response.build(object);
                 }
 
                 String path = request.getMethod() + uri;
@@ -110,16 +119,16 @@ public class Application {
                     if (null != url) {
                         File file = new File(url.getFile());
                         if (file.exists() && !file.isDirectory()) {
-                            return Server.Response.build(file);
+                            return Response.build(file);
                         }
                     }
 
                     if (pathVariables.isEmpty()) {
-                        Object result = handlerError(new RESTfulException("404 Not Found[" + path + "]", 404));
+                        Object result = handlerError(new ForestException("404 Not Found[" + path + "]", 404));
                         if (null != result) {
-                            return Server.Response.build(result);
+                            return Response.build(result);
                         }
-                        return Server.Response.buildError(404);
+                        return Response.buildError(404);
                     }
                 }
 
@@ -132,28 +141,47 @@ public class Application {
                     method.setAccessible(true);
                     Object result = method.invoke(target, buildParams(info, request, pathVariables));
 
-                    return Server.Response.build(result);
+                    return Response.build(result);
                 } catch (InvocationTargetException e) {
                     // 调用方法抛出异常
                     Object result = handlerError(e.getTargetException());
                     if (null != result) {
-                        return Server.Response.build(result);
+                        return Response.build(result);
                     }
                 } catch (Exception e) {
                     outLog(getClass(), e.getMessage(), e);
 
                     // 内部错误
-                    Object result = handlerError(new RESTfulException(e.getMessage(), 500));
+                    Object result = handlerError(new ForestException(e.getMessage(), 500));
                     if (null != result) {
-                        return Server.Response.build(result);
+                        return Response.build(result);
                     }
                 }
 
-                return Server.Response.buildError(500);
+                return Response.buildError(500);
             }
         });
 
-        _SERVER.start(args);
+
+        int port = Server.DEFAULT_PORT;
+        String port1 = ConfigUtils.getValue("port");
+        if (null != port1) {
+            port = Integer.parseInt(port1);
+        }
+
+        if (null != args) {
+            for (String p : args) {
+                if (p.startsWith("-p")) {
+                    p = p.substring(p.indexOf("=") + 1, p.length()).trim();
+                    port = Integer.parseInt(p);
+                }
+            }
+        }
+
+        System.out.println("Started (" + (System.currentTimeMillis() - start) + ")ms");
+
+        _SERVER.start(port);
+
     }
 
     /**
@@ -169,7 +197,7 @@ public class Application {
     /**
      * 参数列表赋值
      */
-    private static Object[] buildParams(Application.MethodInfo info, Server.Request request, Map<String, String> pathVariables) {
+    private static Object[] buildParams(Application.MethodInfo info, Request request, Map<String, String> pathVariables) {
 
         // 参数赋值
         int pcount = info.parameters.size();
@@ -196,7 +224,7 @@ public class Application {
             } else if (a instanceof RequestBody) {
                 // 整个是对象
                 ps[i] = JSON.map2Object(param.getType(), request.getParameters());
-            } else if (param.getType() == Server.Request.class) {
+            } else if (param.getType() == Request.class) {
                 ps[i] = request;
             } else if (param.getType() == Eorm.class) {
                 ps[i] = getObject(param.getType());
@@ -221,37 +249,29 @@ public class Application {
      * 获取类对象实例
      */
     private static Object getObject(Class clazz) {
+        return getObject(clazz, null);
+    }
 
+    private static Object getObject(Class clazz, Object defaultValue) {
 
         Object target = _OBJECT.get(clazz);
         if (null == target) {
-            if (clazz == Eorm.class) {
-                try {
-                    // 数据库实例化
-                    String impl = ConfigUtils.getValue("eorm.impl", "com.denghb.eorm.impl.EormMySQLImpl");
-                    String url = ConfigUtils.getValue("eorm.url");
-                    String username = ConfigUtils.getValue("eorm.username");
-                    String password = ConfigUtils.getValue("eorm.password");
-
-                    Class c = Class.forName(impl);
-                    Eorm eorm = (Eorm) ReflectUtils.constructorInstance(c, new Class[]{String.class, String.class, String.class}, new Object[]{url, username, password});
-                    _OBJECT.put(clazz, eorm);
-                    return eorm;
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+            if (null != defaultValue) {
+                _OBJECT.put(clazz, defaultValue);
+                return defaultValue;
             }
 
             target = ReflectUtils.createInstance(clazz);
-            if (null != target)
+            if (null != target) {
                 _OBJECT.put(clazz, target);
+            }
         }
         return target;
     }
 
-    private static Object handlerFilter(Server.Request request) {
+    private static Object handlerFilter(Request request) {
         try {
-            String key = Before.class.getSimpleName() + request.getMethod() + request.getUri();
+            String key = Filter.class.getSimpleName() + request.getMethod() + request.getUri();
 
             Application.MethodInfo info = null;
             for (String key1 : _OBJECT_METHOD.keySet()) {
@@ -330,7 +350,7 @@ public class Application {
 
 
         try {
-            String key = Error.class.getSimpleName() + e.getClass().getSimpleName();
+            String key = ExceptionHandler.class.getSimpleName() + e.getClass().getSimpleName();
             Application.MethodInfo info = _OBJECT_METHOD.get(key);
             if (null == info) {
                 return null;
@@ -360,39 +380,144 @@ public class Application {
         return null;
     }
 
+    private static <A> void findAnnotations(Class<?> clazz, Set<Annotation> classSet) {
+
+        Annotation[] annotations = clazz.getAnnotations();
+        for (Annotation a : annotations) {
+            if (a instanceof Retention || a instanceof Documented || a instanceof Target) {
+                continue;
+            }
+
+            Class<? extends Annotation> type = a.annotationType();
+            if (type == clazz) {
+                continue;
+            }
+            classSet.add(a);
+
+            findAnnotations(a.annotationType(), classSet);
+
+        }
+    }
+
+    private static Map<Class, Set<Annotation>> annotationCache = new ConcurrentHashMap<Class, Set<Annotation>>();
+
+    private static <A extends Annotation> A findAnnotation(Class<?> clazz, Class<A> annotationType) {
+        // 找到所有的注解
+
+        Set<Annotation> classSet = annotationCache.get(clazz);
+        if (null == classSet) {
+            classSet = new HashSet<Annotation>();
+            findAnnotations(clazz, classSet);
+            annotationCache.put(clazz, classSet);
+        }
+
+        for (Annotation annotation : classSet) {
+            if (annotation.annotationType() == annotationType) {
+                return (A) annotation;
+            }
+        }
+
+        return null;
+    }
 
     private static void init(Class clazz) {
 
         Set<Class> set = ReflectUtils.getSubClasses(clazz);
+        //
         for (Class c : set) {
-            RESTful rest = (RESTful) c.getAnnotation(RESTful.class);
-            if (null == rest) {
+
+            Service service = findAnnotation(c, Service.class);
+            if (null == service) {
                 continue;
             }
             Object target = getObject(c);
             // 字段
             Field[] fields = c.getDeclaredFields();
             for (Field field : fields) {
+                if (field.getAnnotations().length == 0) {
+                    continue;
+                }
+
                 Value value = field.getAnnotation(Value.class);
                 if (null != value) {
                     String string = ConfigUtils.getValue(value.name());
                     ReflectUtils.setFieldValue(field, target, string);
                 }
-                Autowired autowired = field.getAnnotation(Autowired.class);
 
+                Autowired autowired = field.getAnnotation(Autowired.class);
                 if (null != autowired) {
-                    Object object = getObject(field.getType());
+                    Class type = field.getType();
+                    Object object = null;
+                    if (type == Eorm.class) {
+                        try {
+                            // 数据库实例化
+                            String impl = ConfigUtils.getValue("eorm.impl", "com.denghb.eorm.impl.EormMySQLImpl");
+                            String url = ConfigUtils.getValue("eorm.url");
+                            String username = ConfigUtils.getValue("eorm.username");
+                            String password = ConfigUtils.getValue("eorm.password");
+
+                            object = ReflectUtils.constructorInstance(Class.forName(impl), new Class[]{String.class, String.class, String.class}, new Object[]{url, username, password});
+                            object = getObject(type, object);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    } else if (type.isInterface()) {
+                        // 查找对应实现
+                        for (Class ccc : set) {
+                            if (type.isAssignableFrom(ccc)) {
+                                object = getObject(ccc);
+                                break;
+                            }
+                        }
+                    }
+
                     ReflectUtils.setFieldValue(field, target, object);
                 }
             }
 
-
-            String url = rest.value();
             // 获取方法
             List<Method> methods = ReflectUtils.getAllMethods(c);
 
             for (Method method : methods) {
+                if (method.getAnnotations().length == 0) {
+                    continue;
+                }
+                ExceptionHandler error = method.getAnnotation(ExceptionHandler.class);
+                if (null != error) {
+                    add(ExceptionHandler.class.getSimpleName(), error.throwable().getSimpleName(), new MethodInfo(c, method));
+                }
 
+                Scheduled scheduled = method.getAnnotation(Scheduled.class);
+                if (null != scheduled) {
+
+                    if (method.getParameterTypes().length > 0) {
+                        throw new ForestException("@Scheduled 只能无参方法 " + c.getName() + "." + method.getName());
+                    }
+                    TaskManager.register(target, method, scheduled);
+                }
+
+                Filter before = method.getAnnotation(Filter.class);
+                if (null != before) {
+
+                    Class[] ms = before.methods();
+                    for (Class cl : ms) {
+                        // GET/*  POST/*
+                        String path = cl.getSimpleName() + before.value();
+                        add(Filter.class.getSimpleName(), path, new MethodInfo(c, method));
+                    }
+                }
+            }
+
+            RESTful rest = findAnnotation(c, RESTful.class);
+            if (null == rest) {
+                continue;
+            }
+            String url = rest.value();
+
+            for (Method method : methods) {
+                if (method.getAnnotations().length == 0) {
+                    continue;
+                }
                 GET get = method.getAnnotation(GET.class);
                 if (null != get) {
                     add(GET.class.getSimpleName(), url + get.value(), new MethodInfo(c, method));
@@ -413,34 +538,10 @@ public class Application {
                 if (null != delete) {
                     add(DELETE.class.getSimpleName(), url + delete.value(), new MethodInfo(c, method));
                 }
-
-                Error error = method.getAnnotation(Error.class);
-                if (null != error) {
-                    add(Error.class.getSimpleName(), error.throwable().getSimpleName(), new MethodInfo(c, method));
-                }
-
-                Before before = method.getAnnotation(Before.class);
-                if (null != before) {
-
-                    Class[] ms = before.methods();
-                    for (Class cl : ms) {
-                        // GET/*  POST/*
-                        String path = cl.getSimpleName() + before.value();
-                        add(Before.class.getSimpleName(), path, new MethodInfo(c, method));
-                    }
-                }
-                After after = method.getAnnotation(After.class);
-                if (null != after) {
-
-                    Class[] ms = after.methods();
-                    for (Class cl : ms) {
-                        // GET/*  POST/*
-                        String path = cl.getSimpleName() + after.value();
-                        add(After.class.getSimpleName(), path, new MethodInfo(c, method));
-                    }
-                }
             }
         }
+
+        TaskManager.start();
     }
 
     // 添加到方法对象

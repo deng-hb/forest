@@ -109,7 +109,7 @@ public interface Eorm {
      * @param <T>
      * @return
      */
-    public <T> PagingResult<T> list(Class<T> clazz, StringBuffer sql, Paging paging);
+    public <T> PagingResult<T> page(Class<T> clazz, StringBuffer sql, Paging paging);
 
     public interface Handler {
 

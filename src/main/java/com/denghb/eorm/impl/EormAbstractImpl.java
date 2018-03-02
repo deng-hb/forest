@@ -15,12 +15,10 @@ import java.util.Map;
 
 /**
  * 抽象实现
- * <p>
  * insert
  * batchInsert
  * list
  * doTx
- * </p>
  */
 public abstract class EormAbstractImpl implements Eorm {
 

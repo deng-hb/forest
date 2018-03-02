@@ -1,4 +1,4 @@
-package com.denghb.restful.annotation;
+package com.denghb.forest.annotation;
 
 
 import java.lang.annotation.ElementType;
@@ -12,7 +12,7 @@ import java.lang.annotation.Target;
  */
 @Target(value = {ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Before {
+public @interface Filter {
 
     String value() default "/*";
 

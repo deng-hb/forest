@@ -190,7 +190,7 @@ public class JSON {
 
     public static <T> T map2Object(Class<T> clazz, Map map) {
 
-        Object object = ReflectUtils.createInstance(clazz);
+        Object object = ReflectUtils.constructorInstance(clazz);
         List<Field> fields = ReflectUtils.getFields(clazz);
         for (Field field : fields) {
             Object value = map.get(field.getName());

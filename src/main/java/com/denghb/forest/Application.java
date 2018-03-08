@@ -7,7 +7,9 @@ import com.denghb.forest.server.Request;
 import com.denghb.forest.server.Response;
 import com.denghb.forest.server.Server;
 import com.denghb.forest.task.TaskManager;
+import com.denghb.forest.utils.ClassUtils;
 import com.denghb.json.JSON;
+import com.denghb.log.Log;
 import com.denghb.utils.ConfigUtils;
 import com.denghb.utils.ReflectUtils;
 
@@ -29,10 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class Application {
 
-    /**
-     * 所有创建的RESTful对象
-     */
-    static Map<Class, Object> _OBJECT = new ConcurrentHashMap<Class, Object>();
+    private static Log log = ClassUtils.create(Log.class, Application.class);
 
     /**
      * 所有请求方法
@@ -48,24 +47,6 @@ public class Application {
 
     private Application() {
 
-    }
-
-    private static void outLog(Class clazz, String format, Object... arguments) {
-        String log = clazz.getName() + "\t";
-        log += format;
-
-        for (Object object : arguments) {
-            log = log.replaceFirst("\\{\\}", String.valueOf(object));
-        }
-
-        System.out.println(log);
-    }
-
-    private static void outLog(Class clazz, String msg, Throwable t) {
-
-        String log = clazz.getName() + "\t";
-        System.err.println(log + msg);
-        t.printStackTrace();
     }
 
     public static void run(Class clazz, String[] args) {
@@ -88,7 +69,7 @@ public class Application {
                     return Response.build(_OBJECT_METHOD);
                 }
 
-                outLog(getClass(), "{}\t{}", request.getMethod(), uri);
+                log.info("{}\t{}", request.getMethod(), uri);
 
                 // 过滤
                 Object object = handlerFilter(request);
@@ -134,7 +115,7 @@ public class Application {
 
                 try {
 
-                    Object target = getObject(info.getClazz());
+                    Object target = ClassUtils.create(info.getClazz());
 
                     // 执行path对应方法
                     Method method = info.getMethod();
@@ -149,7 +130,7 @@ public class Application {
                         return Response.build(result);
                     }
                 } catch (Exception e) {
-                    outLog(getClass(), e.getMessage(), e);
+                    log.error(e.getMessage(), e);
 
                     // 内部错误
                     Object result = handlerError(new ForestException(e.getMessage(), 500));
@@ -227,7 +208,7 @@ public class Application {
             } else if (param.getType() == Request.class) {
                 ps[i] = request;
             } else if (param.getType() == Eorm.class) {
-                ps[i] = getObject(param.getType());
+                ps[i] = ClassUtils.create(param.getType());
             } else {
                 // TODO
             }
@@ -238,35 +219,11 @@ public class Application {
                     ps[i] = value;
                 } else {
                     // 构造函数实例化
-                    ps[i] = ReflectUtils.constructorInstance(param.getType(), String.class, value);
+                    ps[i] = ClassUtils.create(param.getType(), value);
                 }
             }
         }
         return ps;
-    }
-
-    /**
-     * 获取类对象实例
-     */
-    private static Object getObject(Class clazz) {
-        return getObject(clazz, null);
-    }
-
-    private static Object getObject(Class clazz, Object defaultValue) {
-
-        Object target = _OBJECT.get(clazz);
-        if (null == target) {
-            if (null != defaultValue) {
-                _OBJECT.put(clazz, defaultValue);
-                return defaultValue;
-            }
-
-            target = ReflectUtils.createInstance(clazz);
-            if (null != target) {
-                _OBJECT.put(clazz, target);
-            }
-        }
-        return target;
     }
 
     private static Object handlerFilter(Request request) {
@@ -286,7 +243,7 @@ public class Application {
                 return null;
             }
 
-            Object target = getObject(info.getClazz());
+            Object target = ClassUtils.create(info.getClazz());
             Object[] ps = buildParams(info, request, null);
 
             Method method = info.getMethod();
@@ -356,7 +313,7 @@ public class Application {
                 return null;
             }
 
-            Object target = getObject(info.getClazz());
+            Object target = ClassUtils.create(info.getClazz());
 
             // 参数赋值
             int pcount = info.parameters.size();
@@ -430,7 +387,7 @@ public class Application {
             if (null == service) {
                 continue;
             }
-            Object target = getObject(c);
+            Object target = ClassUtils.create(c);
             // 字段
             Field[] fields = c.getDeclaredFields();
             for (Field field : fields) {
@@ -448,29 +405,18 @@ public class Application {
                 if (null != autowired) {
                     Class type = field.getType();
                     Object object = null;
-                    if (type == Eorm.class) {
-                        try {
-                            // 数据库实例化
-                            String impl = ConfigUtils.getValue("eorm.impl", "com.denghb.eorm.impl.EormMySQLImpl");
-                            String url = ConfigUtils.getValue("eorm.url");
-                            String username = ConfigUtils.getValue("eorm.username");
-                            String password = ConfigUtils.getValue("eorm.password");
-
-                            object = ReflectUtils.constructorInstance(Class.forName(impl), new Class[]{String.class, String.class, String.class}, new Object[]{url, username, password});
-                            object = getObject(type, object);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    } else if (type.isInterface()) {
+                    if (type.isInterface()) {
                         // 查找对应实现
                         for (Class ccc : set) {
                             if (type.isAssignableFrom(ccc)) {
-                                object = getObject(ccc);
+                                object = ClassUtils.create(ccc);
                                 break;
                             }
                         }
                     }
-
+                    if (null == object) {
+                        object = ClassUtils.create(type);
+                    }
                     ReflectUtils.setFieldValue(field, target, object);
                 }
             }
@@ -493,6 +439,7 @@ public class Application {
                     if (method.getParameterTypes().length > 0) {
                         throw new ForestException("@Scheduled 只能无参方法 " + c.getName() + "." + method.getName());
                     }
+                    // 任务管理器
                     TaskManager.register(target, method, scheduled);
                 }
 

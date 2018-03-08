@@ -5,7 +5,8 @@ import com.denghb.eorm.Eorm;
 import com.denghb.forest.Application;
 import com.denghb.forest.ForestException;
 import com.denghb.forest.annotation.*;
-import com.denghb.log.LogUtils;
+import com.denghb.forest.utils.ClassUtils;
+import com.denghb.log.Log;
 import com.denghb.test.forest.service.UserService;
 
 import java.io.IOException;
@@ -13,6 +14,7 @@ import java.util.Date;
 
 @RESTful
 public class App {
+    private static Log log = ClassUtils.create(Log.class, Application.class);
 
     public static void main(String[] args) throws IOException {
         Application.run(App.class, args);
@@ -29,7 +31,12 @@ public class App {
 
     int a = 0;
 
-    @Scheduled(fixedRate = 10 * 1000)
+    @WebSocket
+    void webSocket(String message) {
+
+    }
+
+    // @Scheduled(fixedRate = 10 * 1000)
     void run() {
         userService.create();
     }
@@ -62,7 +69,10 @@ public class App {
             }
         });
         Integer count = eorm.selectOne(Integer.class, "select count(*) from user");
-        LogUtils.info(this.getClass(), String.valueOf(count));
+        log.info(String.valueOf(count));
+
+        Book book = ClassUtils.create(Book.class, 1, "1", 1.1);
+
         return "Hello world!" + a;
     }
 

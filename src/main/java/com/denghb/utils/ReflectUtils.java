@@ -90,7 +90,7 @@ public class ReflectUtils {
     /**
      * 根据实体类创建实体对象
      */
-    public static Object createInstance(Class<?> clazz) {
+    public static Object constructorInstance(Class<?> clazz) {
         if (clazz == null) {
             throw new IllegalArgumentException("Object class mustn't be null");
         }
@@ -244,12 +244,10 @@ public class ReflectUtils {
         }
     }
 
-    private static Class loadClass(String className) {
+    public static Class loadClass(String className) {
         try {
-            //经过回复同学的提醒，这里用forName有一些不好，会触发static方法，没有使用classLoader的load干净
             return Thread.currentThread().getContextClassLoader().loadClass(className);
         } catch (ClassNotFoundException e) {
-            // log.error("添加用户自定义视图类错误 找不到此类的.class文件");
             e.printStackTrace();
         }
         return null;

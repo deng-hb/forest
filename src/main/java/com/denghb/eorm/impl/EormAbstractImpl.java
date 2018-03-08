@@ -110,7 +110,7 @@ public abstract class EormAbstractImpl implements Eorm {
 
                 int columnCount = data.getColumnCount();
                 while (rs.next()) {
-                    Object object = ReflectUtils.createInstance(clazz);
+                    Object object = ReflectUtils.constructorInstance(clazz);
 
                     list.add((T) object);
                     for (int j = 1; j <= columnCount; j++) {

@@ -1,14 +1,11 @@
 package com.denghb.test.forest;
 
-import com.denghb.eorm.Eorm;
-import com.denghb.forest.annotation.Autowired;
 import com.denghb.forest.annotation.Scheduled;
-import com.denghb.forest.annotation.Service;
 import com.denghb.utils.DateUtils;
 
 import java.util.Date;
 
-@Service
+//@Service
 public class Task {
 
 

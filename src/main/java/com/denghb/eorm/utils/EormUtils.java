@@ -1,6 +1,8 @@
 package com.denghb.eorm.utils;
 
 
+import com.denghb.cache.Cache;
+import com.denghb.cache.impl.SimpleCacheImpl;
 import com.denghb.eorm.annotation.Ecolumn;
 import com.denghb.eorm.annotation.Etable;
 import com.denghb.utils.ReflectUtils;
@@ -14,7 +16,7 @@ import java.util.List;
  * 支持使用Annotation标注表结构
  */
 public class EormUtils {
-    private static final ThreadLocal<EormUtils> local = new ThreadLocal<EormUtils>();
+    private static final Cache _CACHE = new SimpleCacheImpl();
     /**
      * 默认主键名
      */
@@ -23,23 +25,33 @@ public class EormUtils {
     private final static String serialVersionUID = "serialVersionUID";
 
     public static <T> String getTableName(final Class<T> clazz) {
+
+        String key = "tableName:" + clazz.getName();
+        String tableName = (String) _CACHE.get(key);
+        if (null != tableName) {
+            return tableName;
+        }
         // 获取表名
         Etable table = clazz.getAnnotation(Etable.class);
         if (null == table) {
             return JdbcUtils.humpToUnderline(clazz.getSimpleName());
         }
-        StringBuilder tableName = new StringBuilder("`");
+        StringBuilder sb = new StringBuilder("`");
         // 获取数据库名称
         String database = table.database();
 
         if (database.trim().length() != 0) {
-            tableName.append(database);
-            tableName.append("`.`");
+            sb.append(database);
+            sb.append("`.`");
         }
         // 获取注解的表名
-        tableName.append(table.name());
-        tableName.append("`");
-        return tableName.toString();
+        sb.append(table.name());
+        sb.append("`");
+        tableName = tableName.toString();
+
+        _CACHE.set(key, tableName);
+
+        return tableName;
     }
 
 
@@ -51,7 +63,13 @@ public class EormUtils {
      */
     public static List<String> getPrimaryKeyNames(Class clazz) {
 
-        List<String> primaryKeys = new ArrayList<String>();
+        String key = "primaryKeys:" + clazz.getName();
+        List<String> primaryKeys = (List<String>) _CACHE.get(key);
+        if (null != primaryKeys) {
+            return primaryKeys;
+        }
+
+        primaryKeys = new ArrayList<String>();
         Field[] classFields = clazz.getDeclaredFields();
         for (Field field : classFields) {
 
@@ -65,10 +83,13 @@ public class EormUtils {
             primaryKeys.add(DEFAULT_PRIMARY_KEY_NAME);
         }
 
+        _CACHE.set(key, primaryKeys);
+
         return primaryKeys;
     }
 
     public static <T> TableInfo getTableInfo(T domain) {
+        // 对象太多不缓存
         TableInfo table = new TableInfo();
 
         Class clazz = domain.getClass();

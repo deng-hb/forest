@@ -7,6 +7,7 @@ import com.denghb.forest.ForestException;
 import com.denghb.forest.annotation.*;
 import com.denghb.forest.utils.ClassUtils;
 import com.denghb.log.Log;
+import com.denghb.log.LogFactory;
 import com.denghb.test.forest.service.UserService;
 
 import java.io.IOException;
@@ -14,7 +15,7 @@ import java.util.Date;
 
 @RESTful
 public class App {
-    private static Log log = ClassUtils.create(Log.class, Application.class);
+    private static Log log = LogFactory.getLog(Application.class);
 
     public static void main(String[] args) throws IOException {
         Application.run(App.class, args);

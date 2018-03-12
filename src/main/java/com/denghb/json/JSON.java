@@ -46,9 +46,8 @@ public class JSON {
                 a = true;
                 sb.append('"');
                 sb.append(key);
-                sb.append("\":\"");
-                sb.append(map.get(key));
-                sb.append('"');
+                sb.append("\":");
+                toJSON(map.get(key), sb, dateFormat);
             }
             sb.append("}");
 
@@ -64,14 +63,7 @@ public class JSON {
                     sb.append(',');
                 }
                 a = true;
-
-                if (value instanceof String) {
-                    sb.append('"');
-                    sb.append(value);
-                    sb.append('"');
-                } else {
-                    toJSON(value, sb, dateFormat);
-                }
+                toJSON(value, sb, dateFormat);
             }
             sb.append(']');
 
@@ -82,7 +74,9 @@ public class JSON {
                 sb.append('"');
             } else if (object instanceof CharSequence) {
                 sb.append('"');
-                sb.append(object);
+                // fix 换行符
+                String str = (String)object;
+                sb.append(str.replaceAll("\\n","\\\\n"));
                 sb.append('"');
             } else if (object instanceof Number) {
                 sb.append(object);
@@ -106,13 +100,7 @@ public class JSON {
                         sb.append(value);
                         continue;
                     }
-                    if (value instanceof String) {
-                        sb.append('"');
-                        sb.append(value);
-                        sb.append('"');
-                    } else {
-                        toJSON(value, sb, dateFormat);
-                    }
+                    toJSON(value, sb, dateFormat);
 
                 }
                 sb.append("}");

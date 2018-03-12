@@ -47,7 +47,7 @@ public class EormUtils {
         // 获取注解的表名
         sb.append(table.name());
         sb.append("`");
-        tableName = tableName.toString();
+        tableName = sb.toString();
 
         _CACHE.set(key, tableName);
 

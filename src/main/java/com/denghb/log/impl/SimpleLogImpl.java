@@ -1,6 +1,9 @@
 package com.denghb.log.impl;
 
 import com.denghb.log.Log;
+import com.denghb.utils.DateUtils;
+
+import java.util.Date;
 
 /**
  * 日志工具类
@@ -51,7 +54,7 @@ public class SimpleLogImpl implements Log {
 
 
     private void outLog(String level, String format, Object... arguments) {
-        String log = clazz.getName() + "\t[" + level + "]\t";
+        String log = DateUtils.format(new Date(), "yyyy-MM-dd HH:mm:ss.SSS\t[") + Thread.currentThread().getName() + "]\t" + clazz.getName() + "\t[" + level + "]\t";
         log += format;
 
         for (Object object : arguments) {
@@ -63,7 +66,7 @@ public class SimpleLogImpl implements Log {
 
     private void outLog(String level, String msg, Throwable t) {
 
-        String log = clazz.getName() + "\t[" + level + "]\t";
+        String log = DateUtils.format(new Date(), "yyyy-MM-dd HH:mm:ss.SSS\t[") + Thread.currentThread().getName() + "]\t" + clazz.getName() + "\t[" + level + "]\t";
 
         System.out.println(log + msg);
         t.printStackTrace();

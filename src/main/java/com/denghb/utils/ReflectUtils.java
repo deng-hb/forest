@@ -48,8 +48,6 @@ public class ReflectUtils {
         }
 
         try {
-            // 反射的对象在使用时应该取消 Java 语言访问检查,（用作于反射字段时对字段作用域不检查
-            // 例如访问private类型和protected类型的字段）
             field.setAccessible(true);
             return field.get(object);// 获取字段的值
         } catch (Exception e) {
@@ -60,8 +58,28 @@ public class ReflectUtils {
     /**
      * 将值保存到实体对象的指定属性中
      */
-    public static void setFieldValue(Field field, Object object, Object value) throws RuntimeException {
+    public static void setFieldValue(Field field, Object object, Object value) {
         try {
+
+            Class type = field.getType();
+
+            // number | boolean | string 类型有字符串构造函数
+            if (Number.class.isAssignableFrom(type) || type == Boolean.class || CharSequence.class.isAssignableFrom(type)) {
+                value = ReflectUtils.constructorInstance(type, String.class, String.valueOf(value));
+            } else if (type.isPrimitive()) {
+                if (int.class == type) {
+                    value = Integer.parseInt((String) value);
+                } else if (long.class == type) {
+                    value = Long.parseLong((String) value);
+                } else if (float.class == type) {
+                    value = Float.parseFloat((String) value);
+                } else if (double.class == type) {
+                    value = Double.parseDouble((String) value);
+                }
+            }
+
+            // TODO Date\基本数据类型
+
             field.setAccessible(true);
             field.set(object, value);
         } catch (Exception e) {

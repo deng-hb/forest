@@ -115,7 +115,7 @@ public abstract class EormAbstractImpl implements Eorm {
                     list.add((T) object);
                     for (int j = 1; j <= columnCount; j++) {
 
-                        String columnName = data.getColumnName(j);
+                        String columnName = data.getColumnLabel(j);
                         Object value = rs.getObject(columnName);
                         if (null == value) {
                             continue;
@@ -128,20 +128,13 @@ public abstract class EormAbstractImpl implements Eorm {
                             if (null != ecolumn) {
                                 if (ecolumn.name().equalsIgnoreCase(columnName)) {
                                     ReflectUtils.setFieldValue(field, object, value);
+                                    continue;
                                 }
                             }
                             // 比较字段名
                             columnName = columnName.replace("_", "");
                             if (field.getName().equalsIgnoreCase(columnName)) {
-
-                                // 数字类型
-                                if (field.getType().getSuperclass() == Number.class) {
-                                    Object number = ReflectUtils.constructorInstance(field.getType(), String.class, String.valueOf(value));
-                                    ReflectUtils.setFieldValue(field, object, number);
-
-                                } else {
-                                    ReflectUtils.setFieldValue(field, object, value);
-                                }
+                                ReflectUtils.setFieldValue(field, object, value);
                             }
                         }
 

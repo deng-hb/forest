@@ -218,7 +218,7 @@ public class Application {
                 if (param.getType() == String.class) {
                     ps[i] = value;
                 } else {
-                    // 构造函数实例化
+                    // TODO 基本类型或普通参数构造函数实例化
                     ps[i] = ClassUtils.create(param.getType(), value);
                 }
             }

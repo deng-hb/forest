@@ -15,7 +15,7 @@ Add
 <dependency>
     <groupId>com.denghb</groupId>
     <artifactId>forest</artifactId>
-    <version>1.0</version>
+    <version>1.0.1</version>
 </dependency>
 ```
 
@@ -23,9 +23,9 @@ Add
 Create `App.java`
 
 ```
-import com.denghb.restful.Application;
-import com.denghb.restful.annotation.GET;
-import com.denghb.restful.annotation.RESTful;
+import com.denghb.forest.Application;
+import com.denghb.forest.annotation.GET;
+import com.denghb.forest.annotation.RESTful;
 
 
 @RESTful
@@ -45,14 +45,7 @@ public class App {
 Main Run `App.java` Open Browser [http://localhost:8888](http://localhost:8888)
 
 
-more [simple-restful-server](https://github.com/deng-hb/simple-restful-server)
-
-
 👏意见反馈 [issues](https://github.com/deng-hb/forest/issues)
 
-TODO
-+ forward
-+ redirect
-+ websocket
-
+QQ群：701075954
 

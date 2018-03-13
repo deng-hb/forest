@@ -9,6 +9,7 @@ import com.denghb.utils.ReflectUtils;
 import java.lang.reflect.Field;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,22 +88,33 @@ public abstract class EormAbstractImpl implements Eorm {
             ResultSetMetaData data = rs.getMetaData();
 
             // map
-            if (clazz.equals(Map.class)) {
-                list = (List<T>) buildMap(rs, data);
-            } else if (clazz.getSuperclass() == Number.class || clazz.getSuperclass() == CharSequence.class || clazz.isPrimitive()) {
-                // 基本类型
+            if (Map.class.isAssignableFrom(clazz)) {
+                list = new ArrayList<T>();
+
+                int columnCount = data.getColumnCount();
+
+                while (rs.next()) {
+
+                    Map<String, Object> map = new HashMap<String, Object>();
+                    for (int j = 1; j <= columnCount; j++) {
+                        String columnName = data.getColumnName(j);
+                        map.put(columnName, rs.getObject(columnName));
+                    }
+
+                    list.add((T) map);
+                }
+            } else if (CharSequence.class.isAssignableFrom(clazz) || Number.class.isAssignableFrom(clazz) || Date.class.isAssignableFrom(clazz)) {
+
+                // 单个类型 Integer、String、Long、Double
                 list = new ArrayList<T>();
                 while (rs.next()) {
                     String columnName = data.getColumnName(1);
                     Object value = rs.getObject(columnName);
 
-                    if (value instanceof Number) {
-                        value = ReflectUtils.constructorInstance(clazz, String.class, String.valueOf(value));
-                    }
                     list.add((T) value);
                 }
-
             } else {
+
                 list = new ArrayList<T>();
 
                 // 所有的字段
@@ -275,25 +287,6 @@ public abstract class EormAbstractImpl implements Eorm {
         }
 
         return selectOne(clazz, sb.toString(), args);
-    }
-
-    private List<Map> buildMap(ResultSet rs, ResultSetMetaData data) throws SQLException {
-
-        List<Map> list = new ArrayList<Map>();
-
-        int columnCount = data.getColumnCount();
-
-        while (rs.next()) {
-
-            Map<String, Object> map = new HashMap<String, Object>();
-            for (int j = 1; j <= columnCount; j++) {
-                String columnName = data.getColumnName(j);
-                map.put(columnName, rs.getObject(columnName));
-            }
-
-            list.add(map);
-        }
-        return list;
     }
 
 }

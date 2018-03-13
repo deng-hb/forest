@@ -205,10 +205,13 @@ public class Application {
             } else if (a instanceof RequestBody) {
                 // 整个是对象
                 ps[i] = JSON.map2Object(param.getType(), request.getParameters());
+                continue;
             } else if (param.getType() == Request.class) {
                 ps[i] = request;
+                continue;
             } else if (param.getType() == Eorm.class) {
                 ps[i] = ClassUtils.create(param.getType());
+                continue;
             } else {
                 // TODO
             }
@@ -219,7 +222,8 @@ public class Application {
                     ps[i] = value;
                 } else {
                     // TODO 基本类型或普通参数构造函数实例化
-                    ps[i] = ClassUtils.create(param.getType(), value);
+                    Object object = ReflectUtils.constructorInstance(param.getType(), String.class,String.valueOf(value));
+                    ps[i] = object;
                 }
             }
         }

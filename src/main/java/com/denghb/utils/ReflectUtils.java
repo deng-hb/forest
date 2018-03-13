@@ -32,7 +32,7 @@ public class ReflectUtils {
         fields.addAll(Arrays.asList(classFields));
 
         Class<?> superclass = clazz.getSuperclass();
-        if (superclass != null) {
+        if (superclass != Object.class) {
             List<Field> superClassFields = getFields(superclass);
             fields.addAll(superClassFields);
         }

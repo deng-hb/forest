@@ -78,7 +78,7 @@ public class JSON {
                 String str = (String)object;
                 sb.append(str.replaceAll("\\n","\\\\n"));
                 sb.append('"');
-            } else if (object instanceof Number) {
+            } else if (object instanceof Number || object instanceof Boolean) {
                 sb.append(object);
             } else {
                 List<Field> fields = ReflectUtils.getFields(object.getClass());

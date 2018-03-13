@@ -311,6 +311,7 @@ public class Application {
 
 
         try {
+            // TODO 子类异常
             String key = ExceptionHandler.class.getSimpleName() + e.getClass().getSimpleName();
             Application.MethodInfo info = _OBJECT_METHOD.get(key);
             if (null == info) {

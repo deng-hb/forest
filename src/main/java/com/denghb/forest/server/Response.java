@@ -1,14 +1,19 @@
 package com.denghb.forest.server;
 
 import com.denghb.json.JSON;
+import com.denghb.log.Log;
+import com.denghb.log.LogFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 public class Response {
+
+    private static final Log log = LogFactory.getLog(Response.class);
 
     // HTTP响应
     private static final String RESPONSE_HTML = "HTTP/1.1 %s\r\nServer: Forest/1.0\r\nContent-Type: %s\r\nConnection: close\r\n\r\n";
@@ -46,6 +51,8 @@ public class Response {
 
         String header = "";
         byte[] bytes = new byte[0];
+        FileInputStream fis = null;
+        ByteArrayOutputStream bos = null;
 
         try {
             if (body instanceof String) {
@@ -70,9 +77,8 @@ public class Response {
                     type = "text/css";
                 }
 
-                FileInputStream fis = null;
                 fis = new FileInputStream(file);
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                bos = new ByteArrayOutputStream();
 
                 byte[] b = new byte[1024];
 
@@ -87,8 +93,26 @@ public class Response {
                 bytes = JSON.toJSON(body).getBytes();
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage(),e);
             code = 500;
+        } finally {
+            if (null != fis) {
+
+                try {
+                    fis.close();
+                } catch (IOException e) {
+
+                    log.error(e.getMessage(),e);
+                }
+            }
+            if (null != bos) {
+
+                try {
+                    bos.close();
+                } catch (IOException e) {
+                    log.error(e.getMessage(),e);
+                }
+            }
         }
 
         // TODO
@@ -127,7 +151,7 @@ public class Response {
         return new Response(code);
     }
 
-    public byte[] addBytes(byte[] data1, byte[] data2) {
+    private byte[] addBytes(byte[] data1, byte[] data2) {
         byte[] data3 = new byte[data1.length + data2.length];
         System.arraycopy(data1, 0, data3, 0, data1.length);
         System.arraycopy(data2, 0, data3, data1.length, data2.length);

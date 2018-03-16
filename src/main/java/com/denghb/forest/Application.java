@@ -129,6 +129,7 @@ public class Application {
                     if (null != result) {
                         return Response.build(result);
                     }
+                    log.error(e.getMessage(), e);
                 } catch (Exception e) {
                     log.error(e.getMessage(), e);
 
@@ -159,7 +160,7 @@ public class Application {
             }
         }
 
-        System.out.println("Started (" + (System.currentTimeMillis() - start) + ")ms");
+        System.out.println("Started " + (System.currentTimeMillis() - start) / 1000.0 + " second");
 
         _SERVER.start(port);
 
@@ -222,7 +223,7 @@ public class Application {
                     ps[i] = value;
                 } else {
                     // TODO 基本类型或普通参数构造函数实例化
-                    Object object = ReflectUtils.constructorInstance(param.getType(), String.class,String.valueOf(value));
+                    Object object = ReflectUtils.constructorInstance(param.getType(), String.class, String.valueOf(value));
                     ps[i] = object;
                 }
             }
@@ -385,13 +386,17 @@ public class Application {
     private static void init(Class clazz) {
 
         Set<Class> set = ReflectUtils.getSubClasses(clazz);
+        List<Class> services = new ArrayList<Class>();
         //
         for (Class c : set) {
 
             Service service = findAnnotation(c, Service.class);
-            if (null == service) {
-                continue;
+            if (null != service) {
+                services.add(c);
             }
+        }
+
+        for (Class c : services) {
             Object target = ClassUtils.create(c);
             // 字段
             Field[] fields = c.getDeclaredFields();
@@ -412,7 +417,7 @@ public class Application {
                     Object object = null;
                     if (type.isInterface()) {
                         // 查找对应实现
-                        for (Class ccc : set) {
+                        for (Class ccc : services) {
                             if (type.isAssignableFrom(ccc)) {
                                 object = ClassUtils.create(ccc);
                                 break;
@@ -460,7 +465,7 @@ public class Application {
                 }
             }
 
-            RESTful rest = findAnnotation(c, RESTful.class);
+            RESTful rest = (RESTful) c.getAnnotation(RESTful.class);
             if (null == rest) {
                 continue;
             }

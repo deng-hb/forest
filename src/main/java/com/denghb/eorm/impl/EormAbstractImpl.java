@@ -108,9 +108,10 @@ public abstract class EormAbstractImpl implements Eorm {
                 // 单个类型 Integer、String、Long、Double
                 list = new ArrayList<T>();
                 while (rs.next()) {
-                    String columnName = data.getColumnName(1);
+                    String columnName = data.getColumnLabel(1);
                     Object value = rs.getObject(columnName);
 
+                    value = ReflectUtils.constructorInstance(clazz,String.class,String.valueOf(value));
                     list.add((T) value);
                 }
             } else {

@@ -39,10 +39,6 @@ public class Server {
 
     }
 
-    public void start() {
-        start(DEFAULT_PORT);
-    }
-
     public void start(int port) {
 
         try {

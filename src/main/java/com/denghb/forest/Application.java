@@ -3,6 +3,8 @@ package com.denghb.forest;
 
 import com.denghb.eorm.Eorm;
 import com.denghb.forest.annotation.*;
+import com.denghb.forest.model.MethodModel;
+import com.denghb.forest.model.ParameterModel;
 import com.denghb.forest.server.Request;
 import com.denghb.forest.server.Response;
 import com.denghb.forest.server.Server;
@@ -10,14 +12,12 @@ import com.denghb.forest.task.TaskManager;
 import com.denghb.forest.utils.ClassUtils;
 import com.denghb.json.JSON;
 import com.denghb.log.Log;
+import com.denghb.utils.AnnotationUtils;
 import com.denghb.utils.ConfigUtils;
 import com.denghb.utils.ReflectUtils;
 
 import java.io.File;
 import java.lang.annotation.Annotation;
-import java.lang.annotation.Documented;
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -37,11 +37,12 @@ public class Application {
      * 所有请求方法
      * <p>
      * <pre>
-     * @GET("/user") -> <"GET/user",MethodInfo>
-     * @Filter("/") -> <"Filter/",MethodInfo>
+     * @GET("/user") -> <"GET/user",MethodModel>
+     * @Filter("/") -> <"Filter/",MethodModel>
      * </pre>
      */
-    static Map<String, MethodInfo> _OBJECT_METHOD = new ConcurrentHashMap<String, MethodInfo>();
+    static Map<String, MethodModel> _HTTP_METHOD = new ConcurrentHashMap<String, MethodModel>();
+    static Map<Class, MethodModel> _EX_METHOD = new ConcurrentHashMap<Class, MethodModel>();
 
     static Server _SERVER = new Server();
 
@@ -52,9 +53,18 @@ public class Application {
     public static void run(Class clazz, String[] args) {
 
         long start = System.currentTimeMillis();
-        System.out.println("Starting ...");
+
+        final String debug = ConfigUtils.getValue("debug");
+
+        if ("true".equals(debug)) {
+            System.out.println("Forest debug starting ...");
+        } else {
+
+            System.out.println("Forest starting ...");
+        }
 
         init(clazz);
+
 
         // 在start之前
         _SERVER.setHandler(new Server.Handler() {
@@ -64,9 +74,9 @@ public class Application {
                 String uri = request.getUri();
 
                 // TODO 运行状态
-                if (uri.equals("/status")) {
+                if ("true".equals(debug) && uri.equals("/forest")) {
 
-                    return Response.build(_OBJECT_METHOD);
+                    return Response.build(_HTTP_METHOD);
                 }
 
                 log.info("{}\t{}", request.getMethod(), uri);
@@ -78,15 +88,15 @@ public class Application {
                 }
 
                 String path = request.getMethod() + uri;
-                Application.MethodInfo info = _OBJECT_METHOD.get(path);
+                MethodModel info = _HTTP_METHOD.get(path);
                 Map<String, String> pathVariables = new HashMap<String, String>();
 
                 if (null == info) {
                     // 参数在path上的匹配
-                    for (String path1 : _OBJECT_METHOD.keySet()) {
+                    for (String path1 : _HTTP_METHOD.keySet()) {
                         buildPath(path1, path, pathVariables);
                         if (!pathVariables.isEmpty()) {
-                            info = _OBJECT_METHOD.get(path1);
+                            info = _HTTP_METHOD.get(path1);
                             break;
                         }
                     }
@@ -160,8 +170,13 @@ public class Application {
             }
         }
 
-        System.out.println("Started " + (System.currentTimeMillis() - start) / 1000.0 + " second");
+        System.out.println("Forest started ⚡ " + (System.currentTimeMillis() - start) / 1000.0 + "s");
 
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            public void run() {
+                stop();
+            }
+        }));
         _SERVER.start(port);
 
     }
@@ -170,6 +185,7 @@ public class Application {
      * 停止服务
      */
     public static void stop() {
+        System.out.println("Forest shutdown");
         if (null != _SERVER) {
             _SERVER.shutdown();
             _SERVER = null;
@@ -179,10 +195,10 @@ public class Application {
     /**
      * 参数列表赋值
      */
-    private static Object[] buildParams(Application.MethodInfo info, Request request, Map<String, String> pathVariables) {
+    private static Object[] buildParams(MethodModel model, Request request, Map<String, String> pathVariables) {
 
         // 参数赋值
-        int pcount = info.parameters.size();
+        int pcount = model.getParameters().size();
         Object[] ps = new Object[pcount];
 
         if (0 == pcount) {
@@ -190,7 +206,7 @@ public class Application {
         }
 
         for (int i = 0; i < pcount; i++) {
-            Param param = info.parameters.get(i);
+            ParameterModel param = model.getParameters().get(i);
             Annotation a = param.getAnnotation();
             String value = null;
 
@@ -235,23 +251,23 @@ public class Application {
         try {
             String key = Filter.class.getSimpleName() + request.getMethod() + request.getUri();
 
-            Application.MethodInfo info = null;
-            for (String key1 : _OBJECT_METHOD.keySet()) {
+            MethodModel methodModel = null;
+            for (String key1 : _HTTP_METHOD.keySet()) {
                 boolean b = comparePath(key1, key);
                 if (b) {
-                    info = _OBJECT_METHOD.get(key1);
+                    methodModel = _HTTP_METHOD.get(key1);
                     break;
                 }
 
             }
-            if (null == info) {
+            if (null == methodModel) {
                 return null;
             }
 
-            Object target = ClassUtils.create(info.getClazz());
-            Object[] ps = buildParams(info, request, null);
+            Object target = ClassUtils.create(methodModel.getClazz());
+            Object[] ps = buildParams(methodModel, request, null);
 
-            Method method = info.getMethod();
+            Method method = methodModel.getMethod();
             method.setAccessible(true);
             return method.invoke(target, ps);
         } catch (InvocationTargetException e1) {
@@ -310,76 +326,47 @@ public class Application {
      */
     private static Object handlerError(Throwable e) {
 
+        Class ec = e.getClass();
+        // 先找异常一样的
+        MethodModel methodModel = _EX_METHOD.get(ec);
+        if (null != methodModel) {
+            return handlerError2(e, methodModel);
+        }
+        // 找父类
+        for (Class clazz : _EX_METHOD.keySet()) {
+            if (clazz.isAssignableFrom(ec)) {
+                return handlerError2(e, _EX_METHOD.get(clazz));
+            }
+        }
+        return null;
+    }
+
+    private static Object handlerError2(Throwable e, MethodModel methodModel) {
 
         try {
             // TODO 子类异常
-            String key = ExceptionHandler.class.getSimpleName() + e.getClass().getSimpleName();
-            Application.MethodInfo info = _OBJECT_METHOD.get(key);
-            if (null == info) {
-                return null;
-            }
 
-            Object target = ClassUtils.create(info.getClazz());
+            Object target = ClassUtils.create(methodModel.getClazz());
 
             // 参数赋值
-            int pcount = info.parameters.size();
+            int pcount = methodModel.getParameters().size();
             Object[] ps = new Object[pcount];
 
             if (0 < pcount) {
 
                 for (int i = 0; i < pcount; i++) {
-                    Param param = info.parameters.get(i);
-                    if (param.getType() == e.getClass()) {
+                    ParameterModel param = methodModel.getParameters().get(i);
+                    if (param.getType() == e.getClass() || param.getType().isAssignableFrom(e.getClass())) {
                         ps[i] = e;
                     }
                 }
             }
-            Method method = info.getMethod();
+            Method method = methodModel.getMethod();
             method.setAccessible(true);
             return method.invoke(target, ps);
         } catch (Exception e1) {
             e1.printStackTrace();
         }
-        return null;
-    }
-
-    private static <A> void findAnnotations(Class<?> clazz, Set<Annotation> classSet) {
-
-        Annotation[] annotations = clazz.getAnnotations();
-        for (Annotation a : annotations) {
-            if (a instanceof Retention || a instanceof Documented || a instanceof Target) {
-                continue;
-            }
-
-            Class<? extends Annotation> type = a.annotationType();
-            if (type == clazz) {
-                continue;
-            }
-            classSet.add(a);
-
-            findAnnotations(a.annotationType(), classSet);
-
-        }
-    }
-
-    private static Map<Class, Set<Annotation>> annotationCache = new ConcurrentHashMap<Class, Set<Annotation>>();
-
-    private static <A extends Annotation> A findAnnotation(Class<?> clazz, Class<A> annotationType) {
-        // 找到所有的注解
-
-        Set<Annotation> classSet = annotationCache.get(clazz);
-        if (null == classSet) {
-            classSet = new HashSet<Annotation>();
-            findAnnotations(clazz, classSet);
-            annotationCache.put(clazz, classSet);
-        }
-
-        for (Annotation annotation : classSet) {
-            if (annotation.annotationType() == annotationType) {
-                return (A) annotation;
-            }
-        }
-
         return null;
     }
 
@@ -389,8 +376,7 @@ public class Application {
         List<Class> services = new ArrayList<Class>();
         //
         for (Class c : set) {
-
-            Service service = findAnnotation(c, Service.class);
+            Service service = AnnotationUtils.findAnnotation(c, Service.class);
             if (null != service) {
                 services.add(c);
             }
@@ -440,7 +426,7 @@ public class Application {
                 }
                 ExceptionHandler error = method.getAnnotation(ExceptionHandler.class);
                 if (null != error) {
-                    add(ExceptionHandler.class.getSimpleName(), error.throwable().getSimpleName(), new MethodInfo(c, method));
+                    _EX_METHOD.put(error.throwable(), new MethodModel(c, method));
                 }
 
                 Scheduled scheduled = method.getAnnotation(Scheduled.class);
@@ -453,14 +439,14 @@ public class Application {
                     TaskManager.register(target, method, scheduled);
                 }
 
-                Filter before = method.getAnnotation(Filter.class);
-                if (null != before) {
+                Filter filter = method.getAnnotation(Filter.class);
+                if (null != filter) {
 
-                    Class[] ms = before.methods();
+                    Class[] ms = filter.methods();
                     for (Class cl : ms) {
                         // GET/*  POST/*
-                        String path = cl.getSimpleName() + before.value();
-                        add(Filter.class.getSimpleName(), path, new MethodInfo(c, method));
+                        String path = cl.getSimpleName() + filter.value();
+                        add(Filter.class.getSimpleName(), path, new MethodModel(c, method));
                     }
                 }
             }
@@ -477,23 +463,23 @@ public class Application {
                 }
                 GET get = method.getAnnotation(GET.class);
                 if (null != get) {
-                    add(GET.class.getSimpleName(), url + get.value(), new MethodInfo(c, method));
+                    add(GET.class.getSimpleName(), url + get.value(), new MethodModel(c, method));
                 }
                 POST post = method.getAnnotation(POST.class);
                 if (null != post) {
-                    add(POST.class.getSimpleName(), url + post.value(), new MethodInfo(c, method));
+                    add(POST.class.getSimpleName(), url + post.value(), new MethodModel(c, method));
                 }
                 PUT put = method.getAnnotation(PUT.class);
                 if (null != put) {
-                    add(PUT.class.getSimpleName(), url + put.value(), new MethodInfo(c, method));
+                    add(PUT.class.getSimpleName(), url + put.value(), new MethodModel(c, method));
                 }
                 PATCH patch = method.getAnnotation(PATCH.class);
                 if (null != patch) {
-                    add(PATCH.class.getSimpleName(), url + patch.value(), new MethodInfo(c, method));
+                    add(PATCH.class.getSimpleName(), url + patch.value(), new MethodModel(c, method));
                 }
                 DELETE delete = method.getAnnotation(DELETE.class);
                 if (null != delete) {
-                    add(DELETE.class.getSimpleName(), url + delete.value(), new MethodInfo(c, method));
+                    add(DELETE.class.getSimpleName(), url + delete.value(), new MethodModel(c, method));
                 }
             }
         }
@@ -502,13 +488,13 @@ public class Application {
     }
 
     // 添加到方法对象
-    private static void add(String method, String path, MethodInfo info) {
+    private static void add(String method, String path, MethodModel info) {
 
         String key = method + path;
-        if (_OBJECT_METHOD.containsKey(key)) {
+        if (_HTTP_METHOD.containsKey(key)) {
             throw new IllegalArgumentException("Duplicate @" + method + "(\"" + path + "\")");
         }
-        _OBJECT_METHOD.put(key, info);
+        _HTTP_METHOD.put(key, info);
     }
 
     /**
@@ -569,94 +555,6 @@ public class Application {
 
         }
 
-    }
-
-    private static class MethodInfo {
-
-        private Class clazz;
-
-        private Method method;
-
-        private List<Param> parameters;// 所有参数名
-
-        public MethodInfo(Class clazz, Method method) {
-            this.clazz = clazz;
-            this.method = method;
-
-            this.parameters = new ArrayList<Param>();
-
-            // 解析参数适配1.5、1.8有新方法
-            Class<?>[] types = method.getParameterTypes();
-            int length = types.length;
-            if (length == 0) {
-                return;
-            }
-
-            for (int i = 0; i < length; i++) {
-
-                Class pc = types[i];
-                this.parameters.add(new Param(pc, null));// 先把类型填入
-
-                Annotation[] parameterAnnotations = method.getParameterAnnotations()[i];
-                for (Annotation annotation : parameterAnnotations) {
-                    this.parameters.set(i, new Param(pc, annotation));
-                }
-            }
-
-        }
-
-        public Class getClazz() {
-            return clazz;
-        }
-
-        public void setClazz(Class clazz) {
-            this.clazz = clazz;
-        }
-
-        public Method getMethod() {
-            return method;
-        }
-
-        public void setMethod(Method method) {
-            this.method = method;
-        }
-
-        public List<Param> getParameters() {
-            return parameters;
-        }
-
-        public void setParameters(List<Param> parameters) {
-            this.parameters = parameters;
-        }
-    }
-
-
-    // 一个参数只支持一个注解
-    private static class Param {
-        private Class type;// 参数类型
-
-        private Annotation annotation;// 参数注解
-
-        public Param(Class type, Annotation annotation) {
-            this.type = type;
-            this.annotation = annotation;
-        }
-
-        public Class getType() {
-            return type;
-        }
-
-        public void setType(Class type) {
-            this.type = type;
-        }
-
-        public Annotation getAnnotation() {
-            return annotation;
-        }
-
-        public void setAnnotation(Annotation annotation) {
-            this.annotation = annotation;
-        }
     }
 
 

@@ -57,14 +57,14 @@ public class Response {
         try {
             if (body instanceof String) {
                 bytes = String.valueOf(body).getBytes();
-                type = "text/html";
+                type = "text/html;charset=UTF-8";
             } else if (body instanceof File) {
 
                 File file = (File) body;
 
                 String fileName = file.getAbsolutePath().toLowerCase();
                 if (fileName.endsWith("html")) {
-                    type = "text/html";
+                    type = "text/html;charset=UTF-8";
                 } else if (fileName.endsWith("jpg") || fileName.endsWith("jpeg")) {
                     type = "image/jpeg";
                 } else if (fileName.endsWith("js")) {

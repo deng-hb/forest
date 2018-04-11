@@ -42,9 +42,15 @@ public class App {
         userService.create();
     }
 
-    @ExceptionHandler(throwable = ForestException.class)
-    void error(ForestException e) {
+    //@ExceptionHandler(throwable = ForestException.class)
+    String error(ForestException e) {
         e.printStackTrace();
+        return "捕获自定义错误1";
+    }
+    @ExceptionHandler
+    String error(Exception e) {
+        e.printStackTrace();
+        return "捕获错误";
     }
 
     @GET("/error")

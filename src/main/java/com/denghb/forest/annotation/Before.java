@@ -1,13 +1,18 @@
 package com.denghb.forest.annotation;
 
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target(ElementType.METHOD)
+/**
+ * 在什么请求之前
+ * 返回null表示放行
+ */
+@Target(value = {ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface InterceptorHandler {
+public @interface Before {
 
     String value() default "/*";
 

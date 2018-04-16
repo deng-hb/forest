@@ -5,6 +5,8 @@ import com.denghb.eorm.Eorm;
 import com.denghb.forest.Application;
 import com.denghb.forest.ForestException;
 import com.denghb.forest.annotation.*;
+import com.denghb.forest.annotation.GET;
+import com.denghb.forest.server.Request;
 import com.denghb.forest.utils.ClassUtils;
 import com.denghb.log.Log;
 import com.denghb.log.LogFactory;
@@ -17,7 +19,16 @@ import java.util.Date;
 public class App {
     private static Log log = LogFactory.getLog(Application.class);
 
+    public static void testStr(String str) {
+        str = str + "test";
+    }
+
     public static void main(String[] args) throws IOException {
+
+        String hi = "hi";
+        testStr(hi);
+        System.out.println(hi);
+
         Application.run(App.class, args);
     }
 
@@ -37,6 +48,27 @@ public class App {
 
     }
 
+    @Before(value = "/*", methods = {GET.class})
+    public Object before(Request request) {
+        System.out.println("before");
+        if (request.getUri().equals("/")) {
+            return "MyInterceptor before";
+        }
+        return null;
+    }
+
+    @After(value = "/*", methods = {GET.class})
+    public Object after(Request request, Object result, @RequestParameter("p") String p) {
+        System.out.println("after" + p);
+
+        if (request.getUri().equals("/")) {
+            return "after change";
+        }
+
+        return null;
+
+    }
+
     // @Scheduled(fixedRate = 10 * 1000)
     void run() {
         userService.create();
@@ -47,6 +79,7 @@ public class App {
         e.printStackTrace();
         return "捕获自定义错误1";
     }
+
     @ExceptionHandler
     String error(Exception e) {
         e.printStackTrace();

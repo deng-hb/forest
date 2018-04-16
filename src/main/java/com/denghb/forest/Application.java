@@ -1,29 +1,10 @@
 package com.denghb.forest;
 
 
-import com.denghb.eorm.Eorm;
-import com.denghb.forest.annotation.*;
-import com.denghb.forest.model.MethodModel;
-import com.denghb.forest.model.ParameterModel;
-import com.denghb.forest.server.Request;
-import com.denghb.forest.server.Response;
 import com.denghb.forest.server.Server;
-import com.denghb.forest.task.TaskManager;
 import com.denghb.forest.utils.ClassUtils;
-import com.denghb.json.JSON;
 import com.denghb.log.Log;
-import com.denghb.utils.AnnotationUtils;
 import com.denghb.utils.ConfigUtils;
-import com.denghb.utils.ReflectUtils;
-
-import java.io.File;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.URL;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
@@ -32,17 +13,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Application {
 
     private static Log log = ClassUtils.create(Log.class, Application.class);
-
-    /**
-     * 所有请求方法
-     * <p>
-     * <pre>
-     * @GET("/user") -> <"GET/user",MethodModel>
-     * @Filter("/") -> <"Filter/",MethodModel>
-     * </pre>
-     */
-    static Map<String, MethodModel> _HTTP_METHOD = new ConcurrentHashMap<String, MethodModel>();
-    static Map<Class, MethodModel> _EX_METHOD = new ConcurrentHashMap<Class, MethodModel>();
 
     static Server _SERVER = new Server();
 
@@ -54,105 +24,19 @@ public class Application {
 
         long start = System.currentTimeMillis();
 
-        final String debug = ConfigUtils.getValue("debug");
+        final boolean debug = "true".equals(ConfigUtils.getValue("debug"));
 
-        if ("true".equals(debug)) {
+        if (debug) {
             System.out.println("Forest debug starting ...");
         } else {
 
             System.out.println("Forest starting ...");
         }
 
-        init(clazz);
-
+        Forest.init(clazz);
 
         // 在start之前
-        _SERVER.setHandler(new Server.Handler() {
-            public Response execute(Request request) {
-
-
-                String uri = request.getUri();
-
-                // TODO 运行状态
-                if ("true".equals(debug) && uri.equals("/forest")) {
-
-                    return Response.build(_HTTP_METHOD);
-                }
-
-                log.info("{}\t{}", request.getMethod(), uri);
-
-                // 过滤
-                Object object = handlerFilter(request);
-                if (null != object) {
-                    return Response.build(object);
-                }
-
-                String path = request.getMethod() + uri;
-                MethodModel info = _HTTP_METHOD.get(path);
-                Map<String, String> pathVariables = new HashMap<String, String>();
-
-                if (null == info) {
-                    // 参数在path上的匹配
-                    for (String path1 : _HTTP_METHOD.keySet()) {
-                        buildPath(path1, path, pathVariables);
-                        if (!pathVariables.isEmpty()) {
-                            info = _HTTP_METHOD.get(path1);
-                            break;
-                        }
-                    }
-
-                    // 文件匹配
-                    URL url = this.getClass().getResource("/static" + uri);
-                    if (null == url && uri.equals("/favicon.ico")) {
-                        // 默认图标
-                        url = this.getClass().getResource("/static/forest.ico");
-                    }
-                    if (null != url) {
-                        File file = new File(url.getFile());
-                        if (file.exists() && !file.isDirectory()) {
-                            return Response.build(file);
-                        }
-                    }
-
-                    if (pathVariables.isEmpty()) {
-                        Object result = handlerError(new ForestException("404 Not Found[" + path + "]", 404));
-                        if (null != result) {
-                            return Response.build(result);
-                        }
-                        return Response.buildError(404);
-                    }
-                }
-
-                try {
-
-                    Object target = ClassUtils.create(info.getClazz());
-
-                    // 执行path对应方法
-                    Method method = info.getMethod();
-                    method.setAccessible(true);
-                    Object result = method.invoke(target, buildParams(info, request, pathVariables));
-
-                    return Response.build(result);
-                } catch (InvocationTargetException e) {
-                    // 调用方法抛出异常
-                    Object result = handlerError(e.getTargetException());
-                    if (null != result) {
-                        return Response.build(result);
-                    }
-                    log.error(e.getMessage(), e);
-                } catch (Exception e) {
-                    log.error(e.getMessage(), e);
-
-                    // 内部错误
-                    Object result = handlerError(new ForestException(e.getMessage(), 500));
-                    if (null != result) {
-                        return Response.build(result);
-                    }
-                }
-
-                return Response.buildError(500);
-            }
-        });
+        _SERVER.setHandler(new ForestHandler(log, debug));
 
 
         int port = Server.DEFAULT_PORT;
@@ -169,14 +53,14 @@ public class Application {
                 }
             }
         }
-
-        System.out.println("Forest started ⚡ " + (System.currentTimeMillis() - start) / 1000.0 + "s");
-
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             public void run() {
                 stop();
             }
         }));
+
+        System.out.println("Forest started ⚡ " + (System.currentTimeMillis() - start) / 1000.0 + "s");
+
         _SERVER.start(port);
 
     }
@@ -190,371 +74,6 @@ public class Application {
             _SERVER.shutdown();
             _SERVER = null;
         }
-    }
-
-    /**
-     * 参数列表赋值
-     */
-    private static Object[] buildParams(MethodModel model, Request request, Map<String, String> pathVariables) {
-
-        // 参数赋值
-        int pcount = model.getParameters().size();
-        Object[] ps = new Object[pcount];
-
-        if (0 == pcount) {
-            return ps;
-        }
-
-        for (int i = 0; i < pcount; i++) {
-            ParameterModel param = model.getParameters().get(i);
-            Annotation a = param.getAnnotation();
-            String value = null;
-
-            if (a instanceof RequestParameter) {
-                String name = ((RequestParameter) a).value();
-                value = request.getParameters().get(name);
-            } else if (a instanceof PathVariable) {
-                String name = ((PathVariable) a).value();
-                value = pathVariables.get(name);
-            } else if (a instanceof RequestHeader) {
-                String name = ((RequestHeader) a).value();
-                value = request.getHeaders().get(name);
-            } else if (a instanceof RequestBody) {
-                // 整个是对象
-                ps[i] = JSON.map2Object(param.getType(), request.getParameters());
-                continue;
-            } else if (param.getType() == Request.class) {
-                ps[i] = request;
-                continue;
-            } else if (param.getType() == Eorm.class) {
-                ps[i] = ClassUtils.create(param.getType());
-                continue;
-            } else {
-                // TODO
-            }
-
-            if (null != value) {
-                // TODO 日期格式
-                if (param.getType() == String.class) {
-                    ps[i] = value;
-                } else {
-                    // TODO 基本类型或普通参数构造函数实例化
-                    Object object = ReflectUtils.constructorInstance(param.getType(), String.class, String.valueOf(value));
-                    ps[i] = object;
-                }
-            }
-        }
-        return ps;
-    }
-
-    private static Object handlerFilter(Request request) {
-        try {
-            String key = Filter.class.getSimpleName() + request.getMethod() + request.getUri();
-
-            MethodModel methodModel = null;
-            for (String key1 : _HTTP_METHOD.keySet()) {
-                boolean b = comparePath(key1, key);
-                if (b) {
-                    methodModel = _HTTP_METHOD.get(key1);
-                    break;
-                }
-
-            }
-            if (null == methodModel) {
-                return null;
-            }
-
-            Object target = ClassUtils.create(methodModel.getClazz());
-            Object[] ps = buildParams(methodModel, request, null);
-
-            Method method = methodModel.getMethod();
-            method.setAccessible(true);
-            return method.invoke(target, ps);
-        } catch (InvocationTargetException e1) {
-            return handlerError(e1);
-        } catch (Exception e1) {
-            e1.printStackTrace();
-        }
-        return null;
-    }
-
-    /**
-     * /* -> /x/xx || /xxx/xx/xx..  true
-     * /*a/aa -> /xxxa/aa  true
-     */
-    private static boolean comparePath(String origin, String uri) {
-
-        String[] tmp1s = origin.split("\\/");
-        String[] tmp2s = uri.split("\\/");
-
-        int len1 = tmp1s.length;
-        int len2 = tmp2s.length;
-
-        for (int i = 0; i < len1; i++) {
-            String s1 = tmp1s[i];
-
-            if ("*".equals(s1)) {
-                return true;
-            }
-            String s2 = tmp2s[i];
-
-            int start = s1.indexOf('*');
-            if (-1 < start) {
-
-                String s1start = s1.substring(0, start);
-
-                if (!s2.startsWith(s1start)) {
-                    return false;
-                }
-                int end = s1.lastIndexOf('*');
-                String s1end = s1.substring(end + 1, s1.length());
-
-                if (!s2.endsWith(s1end)) {
-                    return false;
-                }
-
-            } else if (!s1.equals(s2)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * 错误处理
-     */
-    private static Object handlerError(Throwable e) {
-
-        Class ec = e.getClass();
-        // 先找异常一样的
-        MethodModel methodModel = _EX_METHOD.get(ec);
-        if (null != methodModel) {
-            return handlerError2(e, methodModel);
-        }
-        // 找父类
-        for (Class clazz : _EX_METHOD.keySet()) {
-            if (clazz.isAssignableFrom(ec)) {
-                return handlerError2(e, _EX_METHOD.get(clazz));
-            }
-        }
-        return null;
-    }
-
-    private static Object handlerError2(Throwable e, MethodModel methodModel) {
-
-        try {
-            // TODO 子类异常
-
-            Object target = ClassUtils.create(methodModel.getClazz());
-
-            // 参数赋值
-            int pcount = methodModel.getParameters().size();
-            Object[] ps = new Object[pcount];
-
-            if (0 < pcount) {
-
-                for (int i = 0; i < pcount; i++) {
-                    ParameterModel param = methodModel.getParameters().get(i);
-                    if (param.getType() == e.getClass() || param.getType().isAssignableFrom(e.getClass())) {
-                        ps[i] = e;
-                    }
-                }
-            }
-            Method method = methodModel.getMethod();
-            method.setAccessible(true);
-            return method.invoke(target, ps);
-        } catch (Exception e1) {
-            e1.printStackTrace();
-        }
-        return null;
-    }
-
-    private static void init(Class clazz) {
-
-        Set<Class> set = ReflectUtils.getSubClasses(clazz);
-        List<Class> services = new ArrayList<Class>();
-        //
-        for (Class c : set) {
-            Service service = AnnotationUtils.findAnnotation(c, Service.class);
-            if (null != service) {
-                services.add(c);
-            }
-        }
-
-        for (Class c : services) {
-            Object target = ClassUtils.create(c);
-            // 字段
-            Field[] fields = c.getDeclaredFields();
-            for (Field field : fields) {
-                if (field.getAnnotations().length == 0) {
-                    continue;
-                }
-
-                Value value = field.getAnnotation(Value.class);
-                if (null != value) {
-                    String string = ConfigUtils.getValue(value.name());
-                    ReflectUtils.setFieldValue(field, target, string);
-                }
-
-                Autowired autowired = field.getAnnotation(Autowired.class);
-                if (null != autowired) {
-                    Class type = field.getType();
-                    Object object = null;
-                    if (type.isInterface()) {
-                        // 查找对应实现
-                        for (Class ccc : services) {
-                            if (type.isAssignableFrom(ccc)) {
-                                object = ClassUtils.create(ccc);
-                                break;
-                            }
-                        }
-                    }
-                    if (null == object) {
-                        object = ClassUtils.create(type);
-                    }
-                    ReflectUtils.setFieldValue(field, target, object);
-                }
-            }
-
-            // 获取方法
-            List<Method> methods = ReflectUtils.getAllMethods(c);
-
-            for (Method method : methods) {
-                if (method.getAnnotations().length == 0) {
-                    continue;
-                }
-                ExceptionHandler error = method.getAnnotation(ExceptionHandler.class);
-                if (null != error) {
-                    _EX_METHOD.put(error.throwable(), new MethodModel(c, method));
-                }
-
-                Scheduled scheduled = method.getAnnotation(Scheduled.class);
-                if (null != scheduled) {
-
-                    if (method.getParameterTypes().length > 0) {
-                        throw new ForestException("@Scheduled 只能无参方法 " + c.getName() + "." + method.getName());
-                    }
-                    // 任务管理器
-                    TaskManager.register(target, method, scheduled);
-                }
-
-                Filter filter = method.getAnnotation(Filter.class);
-                if (null != filter) {
-
-                    Class[] ms = filter.methods();
-                    for (Class cl : ms) {
-                        // GET/*  POST/*
-                        String path = cl.getSimpleName() + filter.value();
-                        add(Filter.class.getSimpleName(), path, new MethodModel(c, method));
-                    }
-                }
-            }
-
-            RESTful rest = (RESTful) c.getAnnotation(RESTful.class);
-            if (null == rest) {
-                continue;
-            }
-            String url = rest.value();
-
-            for (Method method : methods) {
-                if (method.getAnnotations().length == 0) {
-                    continue;
-                }
-                GET get = method.getAnnotation(GET.class);
-                if (null != get) {
-                    add(GET.class.getSimpleName(), url + get.value(), new MethodModel(c, method));
-                }
-                POST post = method.getAnnotation(POST.class);
-                if (null != post) {
-                    add(POST.class.getSimpleName(), url + post.value(), new MethodModel(c, method));
-                }
-                PUT put = method.getAnnotation(PUT.class);
-                if (null != put) {
-                    add(PUT.class.getSimpleName(), url + put.value(), new MethodModel(c, method));
-                }
-                PATCH patch = method.getAnnotation(PATCH.class);
-                if (null != patch) {
-                    add(PATCH.class.getSimpleName(), url + patch.value(), new MethodModel(c, method));
-                }
-                DELETE delete = method.getAnnotation(DELETE.class);
-                if (null != delete) {
-                    add(DELETE.class.getSimpleName(), url + delete.value(), new MethodModel(c, method));
-                }
-            }
-        }
-
-        TaskManager.start();
-    }
-
-    // 添加到方法对象
-    private static void add(String method, String path, MethodModel info) {
-
-        String key = method + path;
-        if (_HTTP_METHOD.containsKey(key)) {
-            throw new IllegalArgumentException("Duplicate @" + method + "(\"" + path + "\")");
-        }
-        _HTTP_METHOD.put(key, info);
-    }
-
-    /**
-     * 正则搞不懂，硬解析
-     *
-     * @param path1 /x/ss{id}
-     * @param path2 /x/ss234
-     *              {id=234}
-     */
-    private static void buildPath(String path1, String path2, Map<String, String> pathVar) {
-        int start = path1.indexOf('{');
-        if (-1 == start) {
-            return;
-        }
-
-        String tmp1 = path1.substring(0, start);
-        if (!path2.startsWith(tmp1)) {
-            return;// 不属于
-        }
-        String[] tmp1s = path1.substring(start, path1.length()).split("\\/");
-        String[] tmp2s = path2.substring(start, path2.length()).split("\\/");
-        if (tmp1s.length != tmp2s.length || 0 == tmp1s.length) {
-            return;
-        }
-
-        // 假定他们是一样的
-        for (int i = 0; i < tmp1s.length; i++) {
-            String key = tmp1s[i];
-            String value = tmp2s[i];
-
-            int start1 = key.indexOf('{');
-            int end1 = key.indexOf('}');
-
-            if (0 != start1 || end1 != key.length() - 1) {
-                // 需要掐头去尾
-                if (start1 > 0) {
-                    String startStr = key.substring(0, start1);
-                    if (!value.startsWith(startStr)) {
-                        pathVar.clear();
-                        return;// 不匹配
-                    }
-                    value = value.substring(start1, value.length());
-                }
-
-                // 去尾
-                if (end1 != key.length() - 1) {
-                    String endKeyStr = key.substring(end1 + 1, key.length());
-                    if (!value.endsWith(endKeyStr)) {
-                        pathVar.clear();
-                        return;// 不匹配
-                    }
-                    value = value.substring(0, value.indexOf(endKeyStr));
-                }
-            }
-
-            key = key.substring(start1 + 1, end1);
-            pathVar.put(key, value);
-
-        }
-
     }
 
 

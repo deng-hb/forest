@@ -21,17 +21,13 @@ public class Server {
 
     private boolean shutdown = false;
 
-    public interface Handler {
-        Response execute(Request request);
-    }
+    private ServerHandler handler;
 
-    private Handler handler;
-
-    public Handler getHandler() {
+    public ServerHandler getHandler() {
         return handler;
     }
 
-    public void setHandler(Handler handler) {
+    public void setHandler(ServerHandler handler) {
         this.handler = handler;
     }
 

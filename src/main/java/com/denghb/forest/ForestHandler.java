@@ -175,7 +175,7 @@ public class ForestHandler implements ServerHandler {
             Object[] ps = buildParams(methodModel, request, pathVariables);
 
             // TODO 返回值赋值
-            for (int i = 0;i< ps.length;i++) {
+            for (int i = 0; i < ps.length; i++) {
                 if (null == ps[i]) {
                     ps[i] = result;
                 }
@@ -330,7 +330,7 @@ public class ForestHandler implements ServerHandler {
             method.setAccessible(true);
             return method.invoke(target, ps);
         } catch (Exception e1) {
-            e1.printStackTrace();
+            log.error(e1.getMessage(), e1);
         }
         return null;
     }

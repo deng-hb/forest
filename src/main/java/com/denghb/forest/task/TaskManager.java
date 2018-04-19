@@ -1,9 +1,12 @@
 package com.denghb.forest.task;
 
+import com.denghb.eorm.EormTxManager;
 import com.denghb.forest.annotation.Scheduled;
+import com.denghb.forest.annotation.Transaction;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.sql.SQLException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
@@ -40,17 +43,9 @@ public class TaskManager {
         if (ms <= 0) {
             return;
         }
-
         service.scheduleAtFixedRate(new Runnable() {
             public void run() {
-                try {
-                    method.setAccessible(true);
-                    method.invoke(object);
-                } catch (IllegalAccessException e) {
-                    e.printStackTrace();
-                } catch (InvocationTargetException e) {
-                    e.printStackTrace();
-                }
+                doMethod(object, method);
             }
         }, 0, ms, TimeUnit.MILLISECONDS);
     }
@@ -62,16 +57,39 @@ public class TaskManager {
         }
         service.scheduleWithFixedDelay(new Runnable() {
             public void run() {
-                try {
-                    method.setAccessible(true);
-                    method.invoke(object);
-                } catch (IllegalAccessException e) {
-                    e.printStackTrace();
-                } catch (InvocationTargetException e) {
-                    e.printStackTrace();
-                }
+                doMethod(object, method);
             }
         }, 0, ms, TimeUnit.MILLISECONDS);
+    }
+
+    private static void doMethod(Object object, Method method) {
+        boolean tx = null != method.getAnnotation(Transaction.class);
+        try {
+            if (tx) {
+                EormTxManager.begin();
+
+            }
+            method.setAccessible(true);
+            method.invoke(object);
+            if (tx) {
+                EormTxManager.commit();
+
+            }
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+            if (tx) {
+                try {
+                    EormTxManager.rollback();
+                } catch (SQLException e1) {
+                    e1.printStackTrace();
+                }
+
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     private static class Task {

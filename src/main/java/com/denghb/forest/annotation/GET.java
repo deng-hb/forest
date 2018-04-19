@@ -14,4 +14,5 @@ public @interface GET {
 
     String value() default "/";
 
+    String description() default "";
 }

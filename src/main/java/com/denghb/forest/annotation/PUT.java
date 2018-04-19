@@ -14,4 +14,5 @@ public @interface PUT {
 
     String value() default "";
 
+    String description() default "";
 }

@@ -16,4 +16,5 @@ public @interface RESTful {
 
     String value() default "";
 
+    String description() default "";
 }

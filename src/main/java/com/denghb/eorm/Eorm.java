@@ -111,15 +111,4 @@ public interface Eorm {
      */
     public <T> PagingResult<T> page(Class<T> clazz, StringBuffer sql, Paging paging);
 
-    public interface Handler {
-
-        public void doTx(Eorm eorm);
-    }
-
-    /**
-     * 事务处理
-     *
-     * @param handler
-     */
-    public void doTx(Handler handler);
 }

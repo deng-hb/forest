@@ -14,4 +14,5 @@ public @interface DELETE {
 
     String value() default "";
 
+    String description() default "";
 }

@@ -1,5 +1,7 @@
 package com.denghb.forest.model;
 
+import com.denghb.forest.annotation.Transaction;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -11,13 +13,18 @@ public class MethodModel {
 
     private Method method;
 
+    private boolean tx;
+
     private List<ParameterModel> parameters;// 所有参数名
 
     public MethodModel(Class clazz, Method method) {
-        this.clazz = clazz;
+        this.clazz = method.getDeclaringClass();
         this.method = method;
 
         this.parameters = new ArrayList<ParameterModel>();
+
+        // 是否开启事务
+        this.tx = null != method.getAnnotation(Transaction.class);
 
         // 解析参数适配1.5、1.8有新方法
         Class<?>[] types = method.getParameterTypes();
@@ -61,5 +68,13 @@ public class MethodModel {
 
     public void setParameters(List<ParameterModel> parameters) {
         this.parameters = parameters;
+    }
+
+    public boolean isTx() {
+        return tx;
+    }
+
+    public void setTx(boolean tx) {
+        this.tx = tx;
     }
 }

@@ -4,11 +4,9 @@ import com.denghb.eorm.Eorm;
 import com.denghb.eorm.domain.Paging;
 import com.denghb.eorm.domain.PagingResult;
 import com.denghb.eorm.utils.EormUtils;
-import com.denghb.eorm.utils.JdbcUtils;
 import com.denghb.utils.ReflectUtils;
 
 import java.lang.reflect.Field;
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,14 +21,6 @@ public class EormSQLiteImpl extends EormAbstractImpl implements Eorm {
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
-    }
-
-    public EormSQLiteImpl(Connection connection) {
-        super(connection);
-    }
-
-    public EormSQLiteImpl(String url, String username, String password) {
-        super(url, username, password);
     }
 
     public <T> int insert(T domain) {
@@ -164,24 +154,4 @@ public class EormSQLiteImpl extends EormAbstractImpl implements Eorm {
         return result;
     }
 
-    public void doTx(Handler handler) {
-        Connection conn = createConnection();
-        try {
-            conn.setAutoCommit(false);
-            handler.doTx(new EormSQLiteImpl(conn));
-            conn.commit();
-        } catch (Exception e) {
-            try {
-                if (null != conn) {
-                    conn.rollback();
-                }
-            } catch (Exception e1) {
-                e1.printStackTrace();
-            }
-            e.printStackTrace();
-        } finally {
-            JdbcUtils.close(conn);
-        }
-
-    }
 }

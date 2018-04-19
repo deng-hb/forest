@@ -5,30 +5,19 @@ import com.denghb.eorm.Eorm;
 import com.denghb.forest.Application;
 import com.denghb.forest.ForestException;
 import com.denghb.forest.annotation.*;
-import com.denghb.forest.annotation.GET;
 import com.denghb.forest.server.Request;
 import com.denghb.forest.utils.ClassUtils;
 import com.denghb.log.Log;
 import com.denghb.log.LogFactory;
 import com.denghb.test.forest.service.UserService;
 
-import java.io.IOException;
 import java.util.Date;
 
 @RESTful
 public class App {
     private static Log log = LogFactory.getLog(Application.class);
 
-    public static void testStr(String str) {
-        str = str + "test";
-    }
-
-    public static void main(String[] args) throws IOException {
-
-        String hi = "hi";
-        testStr(hi);
-        System.out.println(hi);
-
+    public static void main(String[] args) {
         Application.run(App.class, args);
     }
 
@@ -46,6 +35,12 @@ public class App {
     @WebSocket
     void webSocket(String message) {
 
+    }
+
+    @Filter
+    public Object filter(Request request) {
+        System.out.println("filter");
+        return null;
     }
 
     @Before(value = "/*", methods = {GET.class})
@@ -69,12 +64,13 @@ public class App {
 
     }
 
-    // @Scheduled(fixedRate = 10 * 1000)
+    @Scheduled(fixedRate = 10 * 1000)
+    @Transaction
     void run() {
         userService.create();
     }
 
-    //@ExceptionHandler(throwable = ForestException.class)
+    @ExceptionHandler(throwable = ForestException.class)
     String error(ForestException e) {
         e.printStackTrace();
         return "捕获自定义错误1";
@@ -97,17 +93,12 @@ public class App {
         System.out.println(ab);
 
         System.out.println(++a);
-        eorm.doTx(new Eorm.Handler() {
-            public void doTx(Eorm eorm) {
+        User user = new User();
+        user.setMobile("123123" + a);
+        user.setName("张" + a);
+        user.setCreatedTime(new Date());
+        eorm.insert(user);
 
-                User user = new User();
-                user.setMobile("123123" + a);
-                user.setName("张" + a);
-                user.setCreatedTime(new Date());
-                eorm.insert(user);
-
-            }
-        });
         Integer count = eorm.selectOne(Integer.class, "select count(*) from user");
         log.info(String.valueOf(count));
 

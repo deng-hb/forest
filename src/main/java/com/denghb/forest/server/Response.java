@@ -16,7 +16,7 @@ public class Response {
     private static final Log log = LogFactory.getLog(Response.class);
 
     // HTTP响应
-    private static final String RESPONSE_HTML = "HTTP/1.1 %s\r\nServer: Forest/1.0\r\nContent-Type: %s\r\nConnection: close\r\n\r\n";
+    private static final String RESPONSE_HTML = "HTTP/1.1 %s\r\nServer: Forest/1.0\r\nContent-Type: %s\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n";
 
     private Map<String, String> headers = new HashMap<String, String>();
 
@@ -49,7 +49,6 @@ public class Response {
      */
     public byte[] bytes() {
 
-        String header = "";
         byte[] bytes = new byte[0];
         FileInputStream fis = null;
         ByteArrayOutputStream bos = null;
@@ -93,7 +92,7 @@ public class Response {
                 bytes = JSON.toJSON(body).getBytes();
             }
         } catch (Exception e) {
-            log.error(e.getMessage(),e);
+            log.error(e.getMessage(), e);
             code = 500;
         } finally {
             if (null != fis) {
@@ -102,7 +101,7 @@ public class Response {
                     fis.close();
                 } catch (IOException e) {
 
-                    log.error(e.getMessage(),e);
+                    log.error(e.getMessage(), e);
                 }
             }
             if (null != bos) {
@@ -110,7 +109,7 @@ public class Response {
                 try {
                     bos.close();
                 } catch (IOException e) {
-                    log.error(e.getMessage(),e);
+                    log.error(e.getMessage(), e);
                 }
             }
         }
@@ -134,17 +133,18 @@ public class Response {
                 status = "405 Method Not Allowed";
                 break;
             case 500:
-                status = "500 Internal Server ErrorHandler";
+                status = "500 Internal Server";
                 break;
         }
 
-        header = String.format(RESPONSE_HTML, status, type, body);
+        String resp = String.format(RESPONSE_HTML, status, type, body);
 
-        return addBytes(header.getBytes(), bytes);
+        return addBytes(resp.getBytes(), bytes);
     }
 
     public static Response build(Object body) {
-        return new Response(body);
+        Response response = new Response(body);
+        return response;
     }
 
     public static Response buildError(int code) {

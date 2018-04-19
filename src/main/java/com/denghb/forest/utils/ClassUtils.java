@@ -3,6 +3,7 @@ package com.denghb.forest.utils;
 import com.denghb.cache.Cache;
 import com.denghb.cache.impl.SimpleCacheImpl;
 import com.denghb.eorm.Eorm;
+import com.denghb.eorm.EormTxManager;
 import com.denghb.log.Log;
 import com.denghb.utils.ConfigUtils;
 import com.denghb.utils.ReflectUtils;
@@ -43,11 +44,14 @@ public class ClassUtils<T> {
         }  else if (clazz == Eorm.class) {
             // 数据库实例化
             String impl = ConfigUtils.getValue("eorm.impl", "com.denghb.eorm.impl.EormMySQLImpl");
-            String url = ConfigUtils.getValue("eorm.url");
-            String username = ConfigUtils.getValue("eorm.username");
-            String password = ConfigUtils.getValue("eorm.password");
             Class implClass = ReflectUtils.loadClass(impl);
-            object = ReflectUtils.constructorInstance(implClass, new Class[]{String.class, String.class, String.class}, new Object[]{url, username, password});
+            object = ReflectUtils.constructorInstance(implClass);
+
+            EormTxManager.url = ConfigUtils.getValue("eorm.url");
+            EormTxManager.username = ConfigUtils.getValue("eorm.username");
+            EormTxManager.password = ConfigUtils.getValue("eorm.password");
+
+//            object = ReflectUtils.constructorInstance(implClass, new Class[]{String.class, String.class, String.class}, new Object[]{url, username, password});
         } else {
             int length = args.length;
             Class[] classes = new Class[length];

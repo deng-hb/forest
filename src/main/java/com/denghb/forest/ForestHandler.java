@@ -1,9 +1,15 @@
 package com.denghb.forest;
 
 import com.denghb.eorm.Eorm;
-import com.denghb.forest.annotation.*;
+import com.denghb.eorm.EormTxManager;
+import com.denghb.forest.annotation.PathVariable;
+import com.denghb.forest.annotation.RequestBody;
+import com.denghb.forest.annotation.RequestHeader;
+import com.denghb.forest.annotation.RequestParameter;
+import com.denghb.forest.model.ForestModel;
 import com.denghb.forest.model.MethodModel;
 import com.denghb.forest.model.ParameterModel;
+import com.denghb.forest.model.RestModel;
 import com.denghb.forest.server.Request;
 import com.denghb.forest.server.Response;
 import com.denghb.forest.server.ServerHandler;
@@ -11,6 +17,7 @@ import com.denghb.forest.utils.ClassUtils;
 import com.denghb.forest.utils.PathCompareUtils;
 import com.denghb.json.JSON;
 import com.denghb.log.Log;
+import com.denghb.utils.DateUtils;
 import com.denghb.utils.ReflectUtils;
 
 import java.io.File;
@@ -18,7 +25,10 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ForestHandler implements ServerHandler {
@@ -39,7 +49,21 @@ public class ForestHandler implements ServerHandler {
         // TODO 运行状态
         if (debug && uri.equals("/forest")) {
 
-            return Response.build(Forest._RESTful_Method);
+            ForestModel forest = new ForestModel();
+
+            List<RestModel> list = new ArrayList<RestModel>();
+            forest.setRest(list);
+
+            RestModel rest;
+            for (String path : Forest._RESTful_Method.keySet()) {
+                String method = path.substring(0, path.indexOf("/"));
+                path = path.substring(path.indexOf("/"));
+                rest = new RestModel();
+                rest.setPath(path);
+                rest.setMethod(method);
+                list.add(rest);
+            }
+            return Response.build(forest);
         }
 
         log.info("{}\t{}", request.getMethod(), uri);
@@ -85,6 +109,7 @@ public class ForestHandler implements ServerHandler {
             }
         }
 
+        boolean tx = methodModel.isTx();
         try {
 
             Object target = ClassUtils.create(methodModel.getClazz());
@@ -95,12 +120,26 @@ public class ForestHandler implements ServerHandler {
 
             Object result = handlerBefore(request, pathVariables);
             if (null == result) {
+                if (tx) {
+                    EormTxManager.begin();
+                }
                 result = method.invoke(target, buildParams(methodModel, request, pathVariables));
+
+                if (tx) {
+                    EormTxManager.commit();
+                }
             }
             result = handlerAfter(request, result, pathVariables);
 
             return Response.build(result);
         } catch (InvocationTargetException e) {
+            if (tx) {
+                try {
+                    EormTxManager.rollback();
+                } catch (SQLException e1) {
+                    log.error(e1.getMessage(), e1);
+                }
+            }
             // 调用方法抛出异常
             Object result = handlerError(e.getTargetException());
             if (null != result) {
@@ -272,9 +311,10 @@ public class ForestHandler implements ServerHandler {
             }
 
             if (null != value) {
-                // TODO 日期格式
                 if (param.getType() == String.class) {
                     ps[i] = value;
+                } else if (param.getType() == java.util.Date.class) {
+                    ps[i] = DateUtils.parse(value);
                 } else {
                     // TODO 基本类型或普通参数构造函数实例化
                     Object object = ReflectUtils.constructorInstance(param.getType(), String.class, String.valueOf(value));

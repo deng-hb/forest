@@ -1,11 +1,9 @@
 package com.denghb.json;
 
+import com.denghb.utils.DateUtils;
 import com.denghb.utils.ReflectUtils;
 
 import java.lang.reflect.Field;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -70,13 +68,13 @@ public class JSON {
         } else {
             if (object instanceof Date) {
                 sb.append('"');
-                sb.append(format(dateFormat, (Date) object));
+                sb.append(DateUtils.format((Date) object, dateFormat));
                 sb.append('"');
             } else if (object instanceof CharSequence) {
                 sb.append('"');
                 // fix 换行符
-                String str = (String)object;
-                sb.append(str.replaceAll("\\n","\\\\n"));
+                String str = (String) object;
+                sb.append(str.replaceAll("\\n", "\\\\n"));
                 sb.append('"');
             } else if (object instanceof Number || object instanceof Boolean) {
                 sb.append(object);
@@ -217,7 +215,7 @@ public class JSON {
                 ReflectUtils.setFieldValue(field, object, value);
             } else if (type == Date.class) {
                 // 日期
-                Date date = parseStringToDate(String.valueOf(value));
+                Date date = DateUtils.parse(String.valueOf(value));
                 ReflectUtils.setFieldValue(field, object, date);
             } else if (type.getSuperclass() == Number.class) {
                 // 数字
@@ -247,39 +245,6 @@ public class JSON {
         return (T) object;
     }
 
-    // 预测日期字符串然后转换日期
-    private static Date parseStringToDate(String date) {
-
-        String parse = date;
-        parse = parse.replaceFirst("^[0-9]{4}([^0-9])", "yyyy$1");
-        parse = parse.replaceFirst("^[0-9]{2}([^0-9])", "yy$1");
-        parse = parse.replaceFirst("([^0-9])[0-9]{1,2}([^0-9])", "$1MM$2");
-        parse = parse.replaceFirst("([^0-9])[0-9]{1,2}( ?)", "$1dd$2");
-        parse = parse.replaceFirst("( )[0-9]{1,2}([^0-9])", "$1HH$2");
-        parse = parse.replaceFirst("([^0-9])[0-9]{1,2}([^0-9])", "$1mm$2");
-        parse = parse.replaceFirst("([^0-9])[0-9]{1,2}([^0-9]?)", "$1ss$2");
-
-
-        return parse(parse, date);
-    }
-
-    private static String format(String pattern, Date date) {
-        DateFormat format = new SimpleDateFormat(pattern);
-
-        return format.format(date);
-    }
-
-    private static Date parse(String pattern, String dateStr) {
-        DateFormat format = new SimpleDateFormat(pattern);
-
-        Date date = null;
-        try {
-            date = format.parse(dateStr);
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
-        return date;
-    }
 
     /**
      * 读取集合

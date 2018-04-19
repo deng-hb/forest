@@ -1,6 +1,7 @@
 package com.denghb.eorm.impl;
 
 import com.denghb.eorm.Eorm;
+import com.denghb.eorm.EormTxManager;
 import com.denghb.eorm.annotation.Ecolumn;
 import com.denghb.eorm.utils.EormUtils;
 import com.denghb.eorm.utils.JdbcUtils;
@@ -23,39 +24,11 @@ import java.util.Map;
  */
 public abstract class EormAbstractImpl implements Eorm {
 
-    private Connection connection;
-
-    private String url;
-
-    private String username;
-
-    private String password;
-
-    public EormAbstractImpl(Connection connection) {
-        this.connection = connection;
-    }
-
-    public EormAbstractImpl(String url, String username, String password) {
-        this.url = url;
-        this.username = username;
-        this.password = password;
-        this.connection = createConnection();
-    }
-
-    public Connection createConnection() {
-        try {
-            return DriverManager.getConnection(url, username, password);
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("connection error");
-        }
-    }
-
     public int execute(String sql, Object... args) {
         int res = 0;
         PreparedStatement ps = null;
         try {
-            ps = connection.prepareStatement(sql);
+            ps = EormTxManager.getTxConnection().prepareStatement(sql);
 
             int i = 1;
             for (Object object : args) {
@@ -76,7 +49,7 @@ public abstract class EormAbstractImpl implements Eorm {
         PreparedStatement ps = null;
         ResultSet rs = null;
         try {
-            ps = connection.prepareStatement(sql);
+            ps = EormTxManager.getConnection().prepareStatement(sql);
 
             int i = 1;
             for (Object object : args) {
@@ -111,7 +84,7 @@ public abstract class EormAbstractImpl implements Eorm {
                     String columnName = data.getColumnLabel(1);
                     Object value = rs.getObject(columnName);
 
-                    value = ReflectUtils.constructorInstance(clazz,String.class,String.valueOf(value));
+                    value = ReflectUtils.constructorInstance(clazz, String.class, String.valueOf(value));
                     list.add((T) value);
                 }
             } else {

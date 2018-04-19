@@ -20,5 +20,11 @@ public class UserMockServiceImpl implements UserService {
         user.setName("fixedRate");
         user.setMobile("1000L");
         eorm.insert(user);
+
+        user.setName("xxxx");
+        eorm.update(user);
+
+//        throw new RuntimeException("rollback");
+
     }
 }

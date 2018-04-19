@@ -14,4 +14,5 @@ public @interface PATCH {
 
     String value();
 
+    String description() default "";
 }

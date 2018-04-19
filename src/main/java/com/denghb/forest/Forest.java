@@ -1,5 +1,6 @@
 package com.denghb.forest;
 
+import com.denghb.eorm.EormTxManager;
 import com.denghb.forest.annotation.*;
 import com.denghb.forest.model.MethodModel;
 import com.denghb.forest.task.TaskManager;
@@ -9,7 +10,9 @@ import com.denghb.utils.ConfigUtils;
 import com.denghb.utils.ReflectUtils;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -85,11 +88,6 @@ public class Forest {
                     continue;
                 }
 
-                ExceptionHandler error = method.getAnnotation(ExceptionHandler.class);
-                if (null != error) {
-                    _Exception_Method.put(error.throwable(), new MethodModel(c, method));
-                }
-
                 Scheduled scheduled = method.getAnnotation(Scheduled.class);
                 if (null != scheduled) {
 
@@ -100,44 +98,27 @@ public class Forest {
                     TaskManager.register(target, method, scheduled);
                 }
 
-                Filter filter = method.getAnnotation(Filter.class);
-                if (null != filter) {
+                Transaction tx = method.getAnnotation(Transaction.class);
+                if (null != tx) {
 
-                    Class[] ms = filter.methods();
-                    for (Class cl : ms) {
-                        String key = cl.getSimpleName() + filter.value();
-                        if (_Before_Method.containsKey(key)) {
-                            throw new IllegalArgumentException("Duplicate @" + cl.getSimpleName() + "(\"" + filter.value() + "\")");
+                    Proxy.newProxyInstance(c.getClassLoader(), c.getInterfaces(), new InvocationHandler() {
+
+                        public Object invoke(Object proxy, Method method, Object[] args)
+                                throws Throwable {
+                            try {
+                                EormTxManager.begin();
+                                Object value = method.invoke(proxy, args);
+                                EormTxManager.commit();
+                                return value;
+                            } catch (Exception e) {
+                                EormTxManager.rollback();
+                                throw e;
+                            }
                         }
-                        _Before_Method.put(key, new MethodModel(c, method));
-                    }
+
+                    });
                 }
-                Before before = method.getAnnotation(Before.class);
-                if (null != before) {
 
-                    Class[] ms = before.methods();
-                    for (Class cl : ms) {
-
-                        String key = cl.getSimpleName() + before.value();
-                        if (_Before_Method.containsKey(key)) {
-                            throw new IllegalArgumentException("Duplicate @" + cl.getSimpleName() + "(\"" + before.value() + "\")");
-                        }
-                        _Before_Method.put(key, new MethodModel(c, method));
-                    }
-                }
-                After after = method.getAnnotation(After.class);
-                if (null != after) {
-
-                    Class[] ms = after.methods();
-                    for (Class cl : ms) {
-
-                        String key = cl.getSimpleName() + after.value();
-                        if (_After_Method.containsKey(key)) {
-                            throw new IllegalArgumentException("Duplicate @" + cl.getSimpleName() + "(\"" + after.value() + "\")");
-                        }
-                        _After_Method.put(key, new MethodModel(c, method));
-                    }
-                }
             }
 
             RESTful rest = (RESTful) c.getAnnotation(RESTful.class);
@@ -156,6 +137,7 @@ public class Forest {
                 if (method.getAnnotations().length == 0) {
                     continue;
                 }
+
                 GET get = method.getAnnotation(GET.class);
                 if (null != get) {
                     addRESTful(GET.class.getSimpleName(), url + get.value(), new MethodModel(c, method));
@@ -175,6 +157,53 @@ public class Forest {
                 DELETE delete = method.getAnnotation(DELETE.class);
                 if (null != delete) {
                     addRESTful(DELETE.class.getSimpleName(), url + delete.value(), new MethodModel(c, method));
+                }
+
+
+                Filter filter = method.getAnnotation(Filter.class);
+                if (null != filter) {
+
+                    Class[] ms = filter.methods();
+                    for (Class cl : ms) {
+                        String key = cl.getSimpleName() + filter.value();
+                        if (_Filter_Method.containsKey(key)) {
+                            throw new IllegalArgumentException("Duplicate @" + cl.getSimpleName() + "(\"" + filter.value() + "\")");
+                        }
+                        _Filter_Method.put(key, new MethodModel(c, method));
+                    }
+                }
+
+                Before before = method.getAnnotation(Before.class);
+                if (null != before) {
+
+                    Class[] ms = before.methods();
+                    for (Class cl : ms) {
+
+                        String key = cl.getSimpleName() + before.value();
+                        if (_Before_Method.containsKey(key)) {
+                            throw new IllegalArgumentException("Duplicate @" + cl.getSimpleName() + "(\"" + before.value() + "\")");
+                        }
+                        _Before_Method.put(key, new MethodModel(c, method));
+                    }
+                }
+
+                After after = method.getAnnotation(After.class);
+                if (null != after) {
+
+                    Class[] ms = after.methods();
+                    for (Class cl : ms) {
+
+                        String key = cl.getSimpleName() + after.value();
+                        if (_After_Method.containsKey(key)) {
+                            throw new IllegalArgumentException("Duplicate @" + cl.getSimpleName() + "(\"" + after.value() + "\")");
+                        }
+                        _After_Method.put(key, new MethodModel(c, method));
+                    }
+                }
+
+                ExceptionHandler error = method.getAnnotation(ExceptionHandler.class);
+                if (null != error) {
+                    _Exception_Method.put(error.throwable(), new MethodModel(c, method));
                 }
             }
         }

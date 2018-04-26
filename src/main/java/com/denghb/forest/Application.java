@@ -2,8 +2,8 @@ package com.denghb.forest;
 
 
 import com.denghb.forest.server.Server;
-import com.denghb.forest.utils.ClassUtils;
 import com.denghb.log.Log;
+import com.denghb.log.LogFactory;
 import com.denghb.utils.ConfigUtils;
 
 
@@ -12,7 +12,7 @@ import com.denghb.utils.ConfigUtils;
  */
 public class Application {
 
-    private static Log log = ClassUtils.create(Log.class, Application.class);
+    private static Log log = LogFactory.getLog(Application.class);
 
     static Server _SERVER = new Server();
 
@@ -27,10 +27,9 @@ public class Application {
         final boolean debug = "true".equals(ConfigUtils.getValue("debug"));
 
         if (debug) {
-            System.out.println("Forest debug starting ...");
+            log.info("Forest debug starting ...");
         } else {
-
-            System.out.println("Forest starting ...");
+            log.info("Forest starting ...");
         }
 
         Forest.init(clazz);
@@ -59,7 +58,7 @@ public class Application {
             }
         }));
 
-        System.out.println("Forest started ⚡ " + (System.currentTimeMillis() - start) / 1000.0 + "s");
+        log.info("Forest started ⚡ " + (System.currentTimeMillis() - start) / 1000.0 + "s");
 
         _SERVER.start(port);
 

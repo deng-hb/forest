@@ -8,12 +8,10 @@ import com.denghb.eorm.utils.JdbcUtils;
 import com.denghb.utils.ReflectUtils;
 
 import java.lang.reflect.Field;
-import java.sql.*;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.util.*;
 
 /**
  * 抽象实现
@@ -49,7 +47,7 @@ public abstract class EormAbstractImpl implements Eorm {
         PreparedStatement ps = null;
         ResultSet rs = null;
         try {
-            ps = EormTxManager.getConnection().prepareStatement(sql);
+            ps = EormTxManager.getTxConnection().prepareStatement(sql);
 
             int i = 1;
             for (Object object : args) {
@@ -130,7 +128,7 @@ public abstract class EormAbstractImpl implements Eorm {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         } finally {
             JdbcUtils.close(ps);
             JdbcUtils.close(rs);

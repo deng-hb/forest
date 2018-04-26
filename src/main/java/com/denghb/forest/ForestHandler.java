@@ -1,7 +1,5 @@
 package com.denghb.forest;
 
-import com.denghb.eorm.Eorm;
-import com.denghb.eorm.EormTxManager;
 import com.denghb.forest.annotation.PathVariable;
 import com.denghb.forest.annotation.RequestBody;
 import com.denghb.forest.annotation.RequestHeader;
@@ -13,7 +11,7 @@ import com.denghb.forest.model.RestModel;
 import com.denghb.forest.server.Request;
 import com.denghb.forest.server.Response;
 import com.denghb.forest.server.ServerHandler;
-import com.denghb.forest.utils.ClassUtils;
+import com.denghb.forest.utils.BeanFactory;
 import com.denghb.forest.utils.PathCompareUtils;
 import com.denghb.json.JSON;
 import com.denghb.log.Log;
@@ -25,7 +23,6 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -109,10 +106,9 @@ public class ForestHandler implements ServerHandler {
             }
         }
 
-        boolean tx = methodModel.isTx();
         try {
 
-            Object target = ClassUtils.create(methodModel.getClazz());
+            Object target = BeanFactory.getBean(methodModel.getClazz());
 
             // 执行path对应方法
             Method method = methodModel.getMethod();
@@ -120,26 +116,12 @@ public class ForestHandler implements ServerHandler {
 
             Object result = handlerBefore(request, pathVariables);
             if (null == result) {
-                if (tx) {
-                    EormTxManager.begin();
-                }
                 result = method.invoke(target, buildParams(methodModel, request, pathVariables));
-
-                if (tx) {
-                    EormTxManager.commit();
-                }
             }
             result = handlerAfter(request, result, pathVariables);
 
             return Response.build(result);
         } catch (InvocationTargetException e) {
-            if (tx) {
-                try {
-                    EormTxManager.rollback();
-                } catch (SQLException e1) {
-                    log.error(e1.getMessage(), e1);
-                }
-            }
             // 调用方法抛出异常
             Object result = handlerError(e.getTargetException());
             if (null != result) {
@@ -177,7 +159,7 @@ public class ForestHandler implements ServerHandler {
                 return null;
             }
 
-            Object target = ClassUtils.create(methodModel.getClazz());
+            Object target = BeanFactory.getBean(methodModel.getClazz());
             Object[] ps = buildParams(methodModel, request, pathVariables);
 
             Method method = methodModel.getMethod();
@@ -208,7 +190,7 @@ public class ForestHandler implements ServerHandler {
                 return null;
             }
 
-            Object target = ClassUtils.create(methodModel.getClazz());
+            Object target = BeanFactory.getBean(methodModel.getClazz());
 
 
             Object[] ps = buildParams(methodModel, request, pathVariables);
@@ -254,7 +236,7 @@ public class ForestHandler implements ServerHandler {
                 return null;
             }
 
-            Object target = ClassUtils.create(methodModel.getClazz());
+            Object target = BeanFactory.getBean(methodModel.getClazz());
             Object[] ps = buildParams(methodModel, request, null);
 
             Method method = methodModel.getMethod();
@@ -303,9 +285,6 @@ public class ForestHandler implements ServerHandler {
             } else if (param.getType() == Request.class) {
                 ps[i] = request;
                 continue;
-            } else if (param.getType() == Eorm.class) {
-                ps[i] = ClassUtils.create(param.getType());
-                continue;
             } else {
                 // TODO
             }
@@ -351,7 +330,7 @@ public class ForestHandler implements ServerHandler {
         try {
             // TODO 子类异常
 
-            Object target = ClassUtils.create(methodModel.getClazz());
+            Object target = BeanFactory.getBean(methodModel.getClazz());
 
             // 参数赋值
             int pcount = methodModel.getParameters().size();

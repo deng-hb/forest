@@ -1,5 +1,9 @@
 package com.denghb.forest.server;
 
+import com.denghb.forest.Application;
+import com.denghb.log.Log;
+import com.denghb.log.LogFactory;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -16,6 +20,8 @@ import java.util.Set;
  * 端口号优先运行指定参数
  */
 public class Server {
+
+    private static Log log = LogFactory.getLog(Application.class);
 
     public static int DEFAULT_PORT = 8888;
 
@@ -40,7 +46,7 @@ public class Server {
         try {
             run(port);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage(), e);
         }
     }
 
@@ -58,7 +64,7 @@ public class Server {
         serverSocketChannel.configureBlocking(false);
         serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
 
-        System.out.println("Server started http://localhost:" + port);
+        log.info("Server started http://localhost:" + port);
 
         while (!shutdown) {
             //查询就绪的通道数量

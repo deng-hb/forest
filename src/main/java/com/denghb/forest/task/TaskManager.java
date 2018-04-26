@@ -1,12 +1,10 @@
 package com.denghb.forest.task;
 
-import com.denghb.eorm.EormTxManager;
 import com.denghb.forest.annotation.Scheduled;
-import com.denghb.forest.annotation.Transaction;
+import com.denghb.log.Log;
+import com.denghb.log.LogFactory;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.sql.SQLException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
@@ -17,6 +15,8 @@ import java.util.concurrent.TimeUnit;
  *
  */
 public class TaskManager {
+
+    private static Log log = LogFactory.getLog(TaskManager.class);
 
     private static ScheduledExecutorService service = Executors.newScheduledThreadPool(10);
 
@@ -63,32 +63,14 @@ public class TaskManager {
     }
 
     private static void doMethod(Object object, Method method) {
-        boolean tx = null != method.getAnnotation(Transaction.class);
-        try {
-            if (tx) {
-                EormTxManager.begin();
 
-            }
+        try {
+
             method.setAccessible(true);
             method.invoke(object);
-            if (tx) {
-                EormTxManager.commit();
 
-            }
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-            if (tx) {
-                try {
-                    EormTxManager.rollback();
-                } catch (SQLException e1) {
-                    e1.printStackTrace();
-                }
-
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
         }
     }
 

@@ -6,7 +6,6 @@ import com.denghb.forest.Application;
 import com.denghb.forest.ForestException;
 import com.denghb.forest.annotation.*;
 import com.denghb.forest.server.Request;
-import com.denghb.forest.utils.ClassUtils;
 import com.denghb.log.Log;
 import com.denghb.log.LogFactory;
 import com.denghb.test.forest.service.UserService;
@@ -65,7 +64,6 @@ public class App {
     }
 
     @Scheduled(fixedRate = 10 * 1000)
-    @Transaction
     void run() {
         userService.create();
     }
@@ -102,7 +100,6 @@ public class App {
         Integer count = eorm.selectOne(Integer.class, "select count(*) from user");
         log.info(String.valueOf(count));
 
-        Book book = ClassUtils.create(Book.class, 1, "1", 1.1);
 
         return "Hello world!" + a;
     }

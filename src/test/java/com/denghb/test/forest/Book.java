@@ -8,6 +8,10 @@ public class Book {
 
     private Double price;
 
+    public Book() {
+
+    }
+
     public Book(Integer id, String name, Double price) {
         this.id = id;
         this.name = name;

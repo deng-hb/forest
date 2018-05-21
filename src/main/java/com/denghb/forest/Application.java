@@ -12,7 +12,6 @@ import com.denghb.utils.ConfigUtils;
  */
 public class Application {
 
-    private static Log log = LogFactory.getLog(Application.class);
 
     static Server _SERVER = new Server();
 
@@ -24,6 +23,23 @@ public class Application {
 
         long start = System.currentTimeMillis();
 
+
+        String configPath = null;
+        int port = Server.DEFAULT_PORT;
+        if (null != args) {
+            for (String p : args) {
+                if (p.startsWith("-p")) {
+                    p = p.substring(p.indexOf("=") + 1, p.length()).trim();
+                    port = Integer.parseInt(p);
+                }
+                if (p.startsWith("-config")) {
+                    configPath = p.substring(p.indexOf("=") + 1, p.length()).trim();
+                }
+            }
+        }
+        ConfigUtils.init(configPath);
+
+        Log log = LogFactory.getLog(Application.class);
         final boolean debug = "true".equals(ConfigUtils.getValue("debug"));
 
         if (debug) {
@@ -34,24 +50,11 @@ public class Application {
 
         Forest.init(clazz);
 
-        // 在start之前
-        _SERVER.setHandler(new ForestHandler(log, debug));
-
-
-        int port = Server.DEFAULT_PORT;
         String port1 = ConfigUtils.getValue("port");
         if (null != port1) {
             port = Integer.parseInt(port1);
         }
 
-        if (null != args) {
-            for (String p : args) {
-                if (p.startsWith("-p")) {
-                    p = p.substring(p.indexOf("=") + 1, p.length()).trim();
-                    port = Integer.parseInt(p);
-                }
-            }
-        }
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             public void run() {
                 stop();
@@ -60,6 +63,9 @@ public class Application {
 
         log.info("Forest started ⚡ " + (System.currentTimeMillis() - start) / 1000.0 + "s");
 
+
+        // 在start之前
+        _SERVER.setHandler(new ForestHandler(log, debug));
         _SERVER.start(port);
 
     }

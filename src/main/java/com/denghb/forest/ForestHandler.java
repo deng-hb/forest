@@ -63,7 +63,7 @@ public class ForestHandler implements ServerHandler {
             return Response.build(forest);
         }
 
-        log.info("{}\t{}", request.getMethod(), uri);
+        log.info("{}\t{}\t{}", request.getHostAddress(), request.getMethod(), uri);
 
         Object object = handlerFilter(request);
         if (null != object) {
@@ -187,7 +187,7 @@ public class ForestHandler implements ServerHandler {
 
             }
             if (null == methodModel) {
-                return null;
+                return result;
             }
 
             Object target = BeanFactory.getBean(methodModel.getClazz());

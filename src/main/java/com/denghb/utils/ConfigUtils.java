@@ -1,9 +1,9 @@
 package com.denghb.utils;
 
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Properties;
 
 /**
@@ -17,31 +17,44 @@ public class ConfigUtils {
 
     private static Properties properties = new Properties();
 
-    static {
-        InputStream in = AccessController.doPrivileged(new PrivilegedAction<InputStream>() {
-            public InputStream run() {
-                ClassLoader threadCL = Thread.currentThread().getContextClassLoader();
-                if (threadCL != null) {
-                    return threadCL.getResourceAsStream(CONFIG_FILE);
-                } else {
-                    return ClassLoader.getSystemResourceAsStream(CONFIG_FILE);
-                }
+    public static void init(String configPath) {
+        if (null == configPath) {
+            configPath = CONFIG_FILE;
+        }
+        InputStream in = null;
+        try {
+            in = new FileInputStream(configPath);
+        } catch (Exception e) {
+
+        }
+        try {
+            if (null == in) {
+                in = Thread.currentThread().getContextClassLoader().getResourceAsStream(configPath);
             }
-        });
+            if (null != in) {
+                properties.load(in);
+                return;
+            }
+        } catch (Exception e) {
+
+        } finally {
+            close(in);
+        }
+    }
+
+    private static void close(InputStream in) {
         if (null != in) {
             try {
-                properties.load(in);
-            } catch (java.io.IOException e) {
-                // ignored
-            } finally {
-                try {
-                    in.close();
-                } catch (java.io.IOException e) {
-                    // ignored
-                }
+                in.close();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
     }
+
+    private ConfigUtils() {
+    }
+
 
     /**
      * 获取属性

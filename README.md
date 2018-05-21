@@ -11,7 +11,7 @@ Create Maven "maven-archetype-quickstart" Project
 
 Add
 
-```
+```xml
 <dependency>
     <groupId>com.denghb</groupId>
     <artifactId>forest</artifactId>
@@ -22,7 +22,7 @@ Add
 
 Create `App.java`
 
-```
+```java
 import com.denghb.forest.Application;
 import com.denghb.forest.annotation.GET;
 import com.denghb.forest.annotation.RESTful;

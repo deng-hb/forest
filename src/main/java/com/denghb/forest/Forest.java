@@ -55,9 +55,9 @@ public class Forest {
             Object eorm = ReflectUtils.constructorInstance(implClass);
             BeanFactory.setBean(Eorm.class, (Eorm) eorm);
 
-            EormTxManager.url = ConfigUtils.getValue("eorm.url");
-            EormTxManager.username = ConfigUtils.getValue("eorm.username");
-            EormTxManager.password = ConfigUtils.getValue("eorm.password");
+            EormTxManager.url =  ConfigUtils.getValue("eorm.url");
+            EormTxManager.username =  ConfigUtils.getValue("eorm.username");
+            EormTxManager.password =  ConfigUtils.getValue("eorm.password");
 
             return eorm;
         }
@@ -99,7 +99,7 @@ public class Forest {
                     }
                     throw e;
                 } finally {
-                    log.info("3");
+
                 }
             }
         });

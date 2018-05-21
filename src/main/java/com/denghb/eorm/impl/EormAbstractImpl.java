@@ -5,6 +5,8 @@ import com.denghb.eorm.EormTxManager;
 import com.denghb.eorm.annotation.Ecolumn;
 import com.denghb.eorm.utils.EormUtils;
 import com.denghb.eorm.utils.JdbcUtils;
+import com.denghb.log.Log;
+import com.denghb.log.LogFactory;
 import com.denghb.utils.ReflectUtils;
 
 import java.lang.reflect.Field;
@@ -22,7 +24,10 @@ import java.util.*;
  */
 public abstract class EormAbstractImpl implements Eorm {
 
+    private static Log log = LogFactory.getLog(EormAbstractImpl.class);
+
     public int execute(String sql, Object... args) {
+
         int res = 0;
         PreparedStatement ps = null;
         try {
@@ -39,10 +44,13 @@ public abstract class EormAbstractImpl implements Eorm {
         } finally {
             JdbcUtils.close(ps);
         }
+
+        log.debug("execute:\n{}\t{}\n{}\n", res, args, sql);
         return res;
     }
 
     public <T> List<T> select(Class<T> clazz, String sql, Object... args) {
+
         List<T> list = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
@@ -133,6 +141,7 @@ public abstract class EormAbstractImpl implements Eorm {
             JdbcUtils.close(ps);
             JdbcUtils.close(rs);
         }
+        log.debug("select:\nList<{}>({})\t{}\n{}\n", clazz.getSimpleName(), list.size(), args, sql);
         return list;
     }
 

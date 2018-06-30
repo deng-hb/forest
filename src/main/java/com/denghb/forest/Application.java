@@ -1,7 +1,7 @@
 package com.denghb.forest;
 
 
-import com.denghb.forest.server.Server;
+import com.denghb.http.Server;
 import com.denghb.log.Log;
 import com.denghb.log.LogFactory;
 import com.denghb.utils.ConfigUtils;

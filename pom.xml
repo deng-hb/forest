@@ -4,7 +4,7 @@
 
     <groupId>com.denghb</groupId>
     <artifactId>forest</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
     <packaging>jar</packaging>
 
     <name>forest</name>
@@ -66,6 +66,7 @@
             <groupId>asm</groupId>
             <artifactId>asm</artifactId>
             <version>20041228.180559</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
@@ -73,6 +74,12 @@
             <artifactId>sqlite-jdbc</artifactId>
             <version>3.21.0.1</version>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.tomcat</groupId>
+            <artifactId>catalina</artifactId>
+            <version>6.0.13</version>
         </dependency>
 
         <dependency>

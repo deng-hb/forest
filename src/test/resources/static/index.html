@@ -25,6 +25,25 @@
         ws.onerror = function(e) {
             console.log("Connection closed.");
         };
-    </script>
+
+</script>
+
+
+<form action="/" method="post">
+    <fieldset>
+        <legend>普通表单</legend>
+        姓名：<input name="name" type="text" />
+        年龄：<input name="age" type="text" />
+        <input type="submit" value="提交">
+    </fieldset>
+</form>
+
+<form action="/" method="post" enctype="multipart/form-data">
+    <fieldset>
+        <legend>文件表单</legend>
+        <input name="image" type="file" />
+        <input type="submit" value="提交">
+    </fieldset>
+</form>
 </body>
 </html>

@@ -18,7 +18,7 @@ public class TaskManager {
 
     private static Log log = LogFactory.getLog(TaskManager.class);
 
-    private static ScheduledExecutorService service = Executors.newScheduledThreadPool(10);
+    private static ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
 
     private static Queue<Task> QUEUE = new ConcurrentLinkedQueue<Task>();
 

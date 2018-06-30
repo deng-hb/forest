@@ -8,9 +8,9 @@ import com.denghb.forest.model.ForestModel;
 import com.denghb.forest.model.MethodModel;
 import com.denghb.forest.model.ParameterModel;
 import com.denghb.forest.model.RestModel;
-import com.denghb.forest.server.Request;
-import com.denghb.forest.server.Response;
-import com.denghb.forest.server.ServerHandler;
+import com.denghb.http.Request;
+import com.denghb.http.Response;
+import com.denghb.http.ServerHandler;
 import com.denghb.forest.utils.BeanFactory;
 import com.denghb.forest.utils.PathCompareUtils;
 import com.denghb.json.JSON;
@@ -63,7 +63,7 @@ public class ForestHandler implements ServerHandler {
             return Response.build(forest);
         }
 
-        log.info("{}\t{}\t{}", request.getHostAddress(), request.getMethod(), uri);
+        log.info("{}\t{}", request.getMethod(), uri);
 
         Object object = handlerFilter(request);
         if (null != object) {

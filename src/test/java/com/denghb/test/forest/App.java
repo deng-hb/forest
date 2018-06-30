@@ -5,7 +5,7 @@ import com.denghb.eorm.Eorm;
 import com.denghb.forest.Application;
 import com.denghb.forest.ForestException;
 import com.denghb.forest.annotation.*;
-import com.denghb.forest.server.Request;
+import com.denghb.http.Request;
 import com.denghb.log.Log;
 import com.denghb.log.LogFactory;
 import com.denghb.test.forest.service.UserService;
@@ -14,7 +14,7 @@ import java.util.Date;
 
 @RESTful
 public class App {
-    private static Log log = LogFactory.getLog(Application.class);
+    private static Log log = LogFactory.getLog(App.class);
 
     public static void main(String[] args) {
         Application.run(App.class, args);

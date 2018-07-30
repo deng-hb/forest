@@ -1,35 +1,22 @@
 package com.denghb.http;
 
-import com.denghb.forest.Application;
 import com.denghb.log.Log;
 import com.denghb.log.LogFactory;
+import com.denghb.utils.ThreadUtils;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 端口号优先运行指定参数
  */
 public class Server {
 
-    private static Log log = LogFactory.getLog(Application.class);
+    private static Log log = LogFactory.getLog(Server.class);
 
     public static int DEFAULT_PORT = 8888;
-
-    private static ExecutorService service = Executors.newFixedThreadPool(20, new ThreadFactory() {
-        AtomicInteger atomic = new AtomicInteger();
-
-        public Thread newThread(Runnable r) {
-            return new Thread(r, "server-" + this.atomic.getAndIncrement());
-        }
-    });
 
     private boolean shutdown = false;
 
@@ -50,7 +37,13 @@ public class Server {
     public void start(int port) {
 
         try {
-            run(port);
+
+            log.info("Server started http://localhost:" + port);
+            ServerSocket serverSocket = new ServerSocket(port);
+            while (!shutdown) {
+                Socket socket = serverSocket.accept();
+                ThreadUtils.submit(new Handler(socket));
+            }
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
@@ -58,16 +51,6 @@ public class Server {
 
     public void shutdown() {
         shutdown = true;
-    }
-
-    private void run(int port) throws IOException {
-
-        log.info("Server started http://localhost:" + port);
-        ServerSocket serverSocket = new ServerSocket(port);
-        while (!shutdown) {
-            Socket socket = serverSocket.accept();
-            service.submit(new Handler(socket));
-        }
     }
 
     class Handler implements Runnable {
@@ -80,12 +63,12 @@ public class Server {
         public void run() {
             try {
                 service();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 log.error(e.getMessage(), e);
             }
         }
 
-        private void service() throws IOException {
+        private void service() throws Exception {
 
             BufferedInputStream input = null;
             BufferedOutputStream output = null;
@@ -94,15 +77,16 @@ public class Server {
                 output = new BufferedOutputStream(socket.getOutputStream());
 
                 StringBuilder message = new StringBuilder();
-
+                long start = System.currentTimeMillis();
                 int size = 1024;
                 byte[] bytes = new byte[size];
                 int tmp;
                 while (true) {
                     try {
                         tmp = input.read(bytes);
-                        message.append(new String(bytes, 0, tmp));
+                        message.append(new String(bytes, "ISO-8859-1"));
                     } catch (Exception e) {
+                        e.printStackTrace();
                         tmp = -1;
                     }
                     if (tmp < size) {
@@ -110,14 +94,26 @@ public class Server {
                     }
                 }
                 Request request = new Request(message.toString());
+                request.setHostAddress(socket.getInetAddress().getHostAddress());
+                log.info("service:" + (System.currentTimeMillis() - start));
+
+                start = System.currentTimeMillis();
                 Response response = handler.execute(request);
+                log.info("service:" + (System.currentTimeMillis() - start));
+
                 request.getParameters().clear();
                 request.getMultipartFileMap().clear();
                 output.write(response.bytes());
+                output.flush();
 
             } finally {
                 try {
                     output.close();
+                } catch (Exception e) {
+
+                }
+                try {
+                    socket.close();
                 } catch (Exception e) {
 
                 }

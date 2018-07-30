@@ -15,13 +15,13 @@ public class StringUtils {
     public static boolean isNumeric(String str) {
         try {
             new BigDecimal(str);
+            return true;
         } catch (Exception e) {
             return false;//异常 说明包含非数字。
         }
-        return true;
     }
 
-    public static void main(String[] args){
+    public static void main(String[] args) {
 
         System.out.println(isNumeric("123"));
     }

@@ -1,8 +1,8 @@
 package com.denghb.http;
 
 import com.denghb.json.JSON;
-import com.denghb.utils.FileUtils;
 
+import java.io.*;
 import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
@@ -42,6 +42,9 @@ public class Request {
 
         for (String header : headers.split("\r\n")) {
             String[] ss = header.split(": ");
+            if (ss.length != 2) {
+                continue;
+            }
             String key = ss[0];
             String value = ss[1];
             // 统一转小写
@@ -57,63 +60,82 @@ public class Request {
         // 文件
         String contentType = this.headers.get("content-type");
         if (contentType.startsWith("multipart/form-data")) {
-            String boundary = body.substring(0, body.indexOf("\r\n"));
-            body = body.substring(boundary.length() + 2, body.length());
-            String gap = "\r\n" + boundary;
-
-            int end;
-            while (-1 != (end = body.indexOf(gap))) {
-                String content = body.substring(0, end);
-
-                // name
-                int nameStart = content.indexOf("name=\"") + 6;
-                content = content.substring(nameStart);
-                int nameEnd = content.indexOf("\"");
-                String name = content.substring(0, nameEnd);
-
-                // file name
-                String filename = null;
-                int filenameStart = content.indexOf("filename=\"") + 10;
-                if (10 < filenameStart) {
-                    content = content.substring(filenameStart);
-                    int filenameEnd = content.indexOf("\"");
-                    filename = content.substring(0, filenameEnd);
-                }
-
-                String ct = null;
-                int contentTypeStart = content.indexOf("Content-Type: ") + 14;
-                if (14 < contentTypeStart) {
-                    content = content.substring(contentTypeStart);
-                    int contentTypeEnd = content.indexOf("\r\n");
-                    ct = content.substring(0, contentTypeEnd);
-                }
-
-                // value
-                int valueStart = content.indexOf("\r\n\r\n") + 4;
-                String value = content.substring(valueStart);
-
-                if (null != filename) {
-                    byte[] data = value.getBytes();
-                    MultipartFile file = new MultipartFile();
-                    file.setContentType(ct);
-                    file.setData(data);
-                    file.setFilename(filename);
-                    this.multipartFileMap.put(name, file);
-
-
-                    FileUtils.saveFile(data, "/Users/denghb/tmp", filename);
-                } else {
-                    this.parameters.put(name, value);
-                }
-
-                body = body.substring(end + gap.length() + 2);
-            }
-
+            buildMultipart(body);
         } else {
             // 字符读取
             buildParameter(body);
         }
 
+    }
+
+    private void buildMultipart(String body) {
+        String boundary = body.substring(0, body.indexOf("\r\n"));
+        body = body.substring(boundary.length() + 2, body.length());
+        String gap = "\r\n" + boundary;
+
+        int end;
+        while (-1 != (end = body.indexOf(gap))) {
+            String content = body.substring(0, end);
+
+            // name
+            int nameStart = content.indexOf("name=\"") + 6;
+            content = content.substring(nameStart);
+            int nameEnd = content.indexOf("\"");
+            String name = content.substring(0, nameEnd);
+            name = toUtf8(name);
+
+            // file name
+            String filename = null;
+            int filenameStart = content.indexOf("filename=\"") + 10;
+            if (10 < filenameStart) {
+                content = content.substring(filenameStart);
+                int filenameEnd = content.indexOf("\"");
+                filename = content.substring(0, filenameEnd);
+            }
+
+            String contentType = null;
+            int contentTypeStart = content.indexOf("Content-Type: ") + 14;
+            if (14 < contentTypeStart) {
+                content = content.substring(contentTypeStart);
+                int contentTypeEnd = content.indexOf("\r\n");
+                contentType = content.substring(0, contentTypeEnd);
+            }
+
+            // value
+            int valueStart = content.indexOf("\r\n\r\n") + 4;
+            String value = content.substring(valueStart);
+
+            if (null != filename) {
+                try {
+                    byte[] bytes = value.getBytes("ISO-8859-1");
+
+                    MultipartFile file = new MultipartFile();
+                    file.setContentType(contentType);
+                    file.setData(bytes);
+                    file.setFilename(filename);
+
+                    this.multipartFileMap.put(name, file);
+
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                value = toUtf8(value);
+                this.parameters.put(name, value);
+            }
+
+            body = body.substring(end + gap.length() + 2);
+        }
+
+    }
+
+    private String toUtf8(String str) {
+        try {
+            return new String(str.getBytes("ISO-8859-1"), "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public String getHostAddress() {
@@ -161,6 +183,7 @@ public class Request {
             return;
         }
 
+        p = toUtf8(p);
         // JSON ?
         if (p.startsWith("{")) {
             Map a = JSON.parseJSON(Map.class, p);

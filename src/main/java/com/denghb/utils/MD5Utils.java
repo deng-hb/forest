@@ -43,7 +43,7 @@ public class MD5Utils {
         return str.toString();
     }
 
-    private static String text(String text) {
+    public static String text(String text) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
             md.update(text.getBytes());

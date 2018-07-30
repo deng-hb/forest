@@ -1,5 +1,6 @@
 package com.denghb.test.forest;
 
+import com.denghb.utils.HttpUtils;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutorService;

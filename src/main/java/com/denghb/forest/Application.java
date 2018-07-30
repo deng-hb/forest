@@ -12,6 +12,7 @@ import com.denghb.utils.ConfigUtils;
  */
 public class Application {
 
+    private static Log log = LogFactory.getLog(Application.class);
 
     static Server _SERVER = new Server();
 
@@ -39,7 +40,7 @@ public class Application {
         }
         ConfigUtils.init(configPath);
 
-        Log log = LogFactory.getLog(Application.class);
+
         final boolean debug = "true".equals(ConfigUtils.getValue("debug"));
 
         if (debug) {
@@ -74,7 +75,7 @@ public class Application {
      * 停止服务
      */
     public static void stop() {
-        System.out.println("Forest shutdown");
+        log.info("Forest shutdown");
         if (null != _SERVER) {
             _SERVER.shutdown();
             _SERVER = null;

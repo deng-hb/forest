@@ -44,9 +44,14 @@ public class MD5Utils {
     }
 
     public static String text(String text) {
+        bytes(text.getBytes());
+        return null;
+    }
+
+    public static String bytes(byte[] bytes) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
-            md.update(text.getBytes());
+            md.update(bytes);
             byte mdbytes[] = md.digest();
             return toHex(mdbytes);
         } catch (Exception e) {
@@ -55,7 +60,7 @@ public class MD5Utils {
         return null;
     }
 
-    public static void main(String[] args)  {
+    public static void main(String[] args) {
 
         System.out.println(text("1234"));
         System.out.println(text("1234343"));

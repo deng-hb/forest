@@ -31,16 +31,13 @@ public class FileUtils {
     /**
      * 根据byte数组，生成文件
      */
-    public static void saveFile(byte[] bfile, String filePath, String fileName) {
+    public static void saveFile(byte[] bfile, String filePath) {
         BufferedOutputStream bos = null;
         FileOutputStream fos = null;
-        File file = null;
         try {
-            File dir = new File(filePath);
-            if (!dir.exists() && dir.isDirectory()) {//判断文件目录是否存在
-                dir.mkdirs();
-            }
-            file = new File(filePath + "/" + fileName);
+            File file = new File(filePath);
+            checkExist(file);
+
             fos = new FileOutputStream(file);
             bos = new BufferedOutputStream(fos);
             bos.write(bfile);
@@ -73,6 +70,19 @@ public class FileUtils {
      */
     public static void checkExist(String filePath) throws IOException {
         File file = new File(filePath);
+
+        // 文件夹是否存在
+        if (!file.getParentFile().exists()) {
+            file.getParentFile().mkdirs();
+        }
+
+        // 文件是否存在
+        if (!file.exists()) {
+            file.createNewFile();
+        }
+    }
+
+    public static void checkExist(File file) throws IOException {
 
         // 文件夹是否存在
         if (!file.getParentFile().exists()) {

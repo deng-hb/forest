@@ -12,7 +12,7 @@ import com.denghb.test.forest.service.UserService;
 @Service
 public class BookServiceImpl implements BookService {
 
-    @Value(name = "${a}")
+    @Value("${a}")
     private String xx;
 
     @Autowired

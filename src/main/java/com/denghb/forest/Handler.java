@@ -10,7 +10,6 @@ import com.denghb.forest.model.ParameterModel;
 import com.denghb.forest.model.RestModel;
 import com.denghb.http.Request;
 import com.denghb.http.Response;
-import com.denghb.http.ServerHandler;
 import com.denghb.forest.utils.BeanFactory;
 import com.denghb.forest.utils.PathCompareUtils;
 import com.denghb.json.JSON;
@@ -28,13 +27,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ForestHandler implements ServerHandler {
+public class Handler implements com.denghb.http.Handler {
 
     private Log log;
 
     private boolean debug;
 
-    public ForestHandler(Log log, boolean debug) {
+    public Handler(Log log, boolean debug) {
         this.log = log;
         this.debug = debug;
     }

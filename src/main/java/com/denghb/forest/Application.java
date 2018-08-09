@@ -66,7 +66,7 @@ public class Application {
 
 
         // 在start之前
-        _SERVER.setHandler(new ForestHandler(log, debug));
+        _SERVER.setHandler(new Handler(log, debug));
         _SERVER.start(port);
 
     }

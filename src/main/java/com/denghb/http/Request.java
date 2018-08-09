@@ -25,6 +25,9 @@ public class Request {
 
         // GET /xxx?a=aa HTTP/1.1
         int firstStart = message.indexOf(" ");
+        if (-1 == firstStart) {
+            return;
+        }
         this.method = message.substring(0, firstStart);
         String uri = message.substring(firstStart + 1, message.indexOf(" ", message.indexOf(" ") + 1));
         //有问号表示后面跟有参数
@@ -59,6 +62,9 @@ public class Request {
 
         // 文件
         String contentType = this.headers.get("content-type");
+        if (null == contentType) {
+            return;
+        }
         if (contentType.startsWith("multipart/form-data")) {
             buildMultipart(body);
         } else {
@@ -121,7 +127,7 @@ public class Request {
                 }
             } else {
                 value = toUtf8(value);
-                this.parameters.put(name, value);
+                this.parameters.put(name, value.trim());
             }
 
             body = body.substring(end + gap.length() + 2);
@@ -201,7 +207,7 @@ public class Request {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            this.parameters.put(key, value);
+            this.parameters.put(key, value.trim());
         }
     }
 

@@ -1,6 +1,6 @@
 package com.denghb.http;
 
-public interface ServerHandler {
+public interface Handler {
 
     Response execute(Request request);
 

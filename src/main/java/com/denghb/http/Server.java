@@ -6,6 +6,7 @@ import com.denghb.utils.ThreadUtils;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.Closeable;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -20,13 +21,13 @@ public class Server {
 
     private boolean shutdown = false;
 
-    private ServerHandler handler;
+    private com.denghb.http.Handler handler;
 
-    public ServerHandler getHandler() {
+    public com.denghb.http.Handler getHandler() {
         return handler;
     }
 
-    public void setHandler(ServerHandler handler) {
+    public void setHandler(com.denghb.http.Handler handler) {
         this.handler = handler;
     }
 
@@ -77,7 +78,6 @@ public class Server {
                 output = new BufferedOutputStream(socket.getOutputStream());
 
                 StringBuilder message = new StringBuilder();
-                long start = System.currentTimeMillis();
                 int size = 1024;
                 byte[] bytes = new byte[size];
                 int tmp;
@@ -86,7 +86,7 @@ public class Server {
                         tmp = input.read(bytes);
                         message.append(new String(bytes, "ISO-8859-1"));
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        log.error(e.getMessage(), e);
                         tmp = -1;
                     }
                     if (tmp < size) {
@@ -95,29 +95,25 @@ public class Server {
                 }
                 Request request = new Request(message.toString());
                 request.setHostAddress(socket.getInetAddress().getHostAddress());
-                log.info("service:" + (System.currentTimeMillis() - start));
-
-                start = System.currentTimeMillis();
                 Response response = handler.execute(request);
-                log.info("service:" + (System.currentTimeMillis() - start));
 
-                request.getParameters().clear();
-                request.getMultipartFileMap().clear();
                 output.write(response.bytes());
                 output.flush();
 
             } finally {
-                try {
-                    output.close();
-                } catch (Exception e) {
-
-                }
-                try {
-                    socket.close();
-                } catch (Exception e) {
-
-                }
+                close(input);
+                close(output);
+                close(socket);
             }
+
+        }
+    }
+
+    private void close(Closeable closeable) {
+
+        try {
+            closeable.close();
+        } catch (Exception e) {
 
         }
     }

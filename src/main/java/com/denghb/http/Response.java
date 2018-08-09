@@ -4,10 +4,7 @@ import com.denghb.json.JSON;
 import com.denghb.log.Log;
 import com.denghb.log.LogFactory;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -16,7 +13,7 @@ public class Response {
     private static final Log log = LogFactory.getLog(Response.class);
 
     // HTTP响应
-    private static final String RESPONSE_HTML = "HTTP/1.1 %s\r\nServer: Forest/1.0\r\nContent-Type: %s\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n";
+    private static final String RESPONSE_HTML = "HTTP/1.1 %s\r\nServer: Forest/1.0\r\nContent-Type: %s\r\nConnection: close\r\n\r\n";
 
     private Map<String, String> headers = new HashMap<String, String>();
 
@@ -95,23 +92,8 @@ public class Response {
             log.error(e.getMessage(), e);
             code = 500;
         } finally {
-            if (null != fis) {
-
-                try {
-                    fis.close();
-                } catch (IOException e) {
-
-                    log.error(e.getMessage(), e);
-                }
-            }
-            if (null != bos) {
-
-                try {
-                    bos.close();
-                } catch (IOException e) {
-                    log.error(e.getMessage(), e);
-                }
-            }
+            close(fis);
+            close(bos);
         }
 
         // TODO
@@ -140,6 +122,16 @@ public class Response {
         String resp = String.format(RESPONSE_HTML, status, type, body);
 
         return addBytes(resp.getBytes(), bytes);
+    }
+
+
+    private void close(Closeable closeable) {
+
+        try {
+            closeable.close();
+        } catch (Exception e) {
+
+        }
     }
 
     public static Response build(Object body) {

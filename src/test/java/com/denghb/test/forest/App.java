@@ -26,7 +26,7 @@ public class App {
     @Autowired
     private Eorm eorm;
 
-    @Value(name = "ab")
+    @Value("ab")
     private String ab;
 
     int a = 0;

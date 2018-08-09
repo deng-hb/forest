@@ -12,10 +12,7 @@ import com.denghb.utils.ConfigUtils;
 import com.denghb.utils.ReflectUtils;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
+import java.lang.reflect.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -55,9 +52,9 @@ public class Forest {
             Object eorm = ReflectUtils.constructorInstance(implClass);
             BeanFactory.setBean(Eorm.class, (Eorm) eorm);
 
-            EormTxManager.url =  ConfigUtils.getValue("eorm.url");
-            EormTxManager.username =  ConfigUtils.getValue("eorm.username");
-            EormTxManager.password =  ConfigUtils.getValue("eorm.password");
+            EormTxManager.url = ConfigUtils.getValue("eorm.url");
+            EormTxManager.username = ConfigUtils.getValue("eorm.username");
+            EormTxManager.password = ConfigUtils.getValue("eorm.password");
 
             return eorm;
         }
@@ -83,7 +80,7 @@ public class Forest {
                     }
                 }
                 Transaction tx = targetMethod.getAnnotation(Transaction.class);
-                Round round = targetMethod.getAnnotation(Round.class);
+                Round round = targetMethod.getAnnotation(Round.class);// TODO
                 try {
                     if (null != tx) {
                         EormTxManager.begin();
@@ -97,9 +94,11 @@ public class Forest {
                     if (null != tx) {
                         EormTxManager.rollback();
                     }
+                    if (e instanceof InvocationTargetException) {
+                        InvocationTargetException ite = (InvocationTargetException) e;
+                        throw ite.getTargetException();
+                    }
                     throw e;
-                } finally {
-
                 }
             }
         });
@@ -107,7 +106,7 @@ public class Forest {
         return proxy;
     }
 
-    static void initField(Object target){
+    static void initField(Object target) {
 
         Field[] fields = target.getClass().getDeclaredFields();
         for (Field field : fields) {
@@ -117,7 +116,7 @@ public class Forest {
 
             Value value = field.getAnnotation(Value.class);
             if (null != value) {
-                String string = ConfigUtils.getValue(value.name());
+                String string = ConfigUtils.getValue(value.value());
                 ReflectUtils.setFieldValue(field, target, string);
             }
 

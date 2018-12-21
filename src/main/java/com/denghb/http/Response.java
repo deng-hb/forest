@@ -13,7 +13,7 @@ public class Response {
     private static final Log log = LogFactory.getLog(Response.class);
 
     // HTTP响应
-    private static final String RESPONSE_HTML = "HTTP/1.1 %s\r\nServer: Forest/1.0\r\nContent-Type: %s\r\nConnection: close\r\n\r\n";
+    private static final String RESPONSE_HTML = "HTTP/1.1 %s\r\nServer: Config/1.0\r\nContent-Type: %s\r\nConnection: close\r\n\r\n";
 
     private Map<String, String> headers = new HashMap<String, String>();
 
@@ -21,7 +21,7 @@ public class Response {
 
     private String type = "application/json";
 
-    private Object body;
+    private Object body = "";
 
     public Response() {
 

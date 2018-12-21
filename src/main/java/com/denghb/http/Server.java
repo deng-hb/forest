@@ -95,8 +95,13 @@ public class Server {
                 }
                 Request request = new Request(message.toString());
                 request.setHostAddress(socket.getInetAddress().getHostAddress());
-                Response response = handler.execute(request);
 
+                Response response = null;
+                if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+                    response = new Response();
+                } else {
+                    response = handler.execute(request);
+                }
                 output.write(response.bytes());
                 output.flush();
 

@@ -1,11 +1,11 @@
 package com.denghb.forest;
 
 import com.denghb.eorm.Eorm;
-import com.denghb.eorm.EormTxManager;
+import com.denghb.eorm.EormDataSource;
+import com.denghb.eorm.impl.MySQLEormImpl;
 import com.denghb.forest.annotation.*;
 import com.denghb.forest.model.MethodModel;
 import com.denghb.forest.task.TaskManager;
-import com.denghb.forest.utils.BeanFactory;
 import com.denghb.log.Log;
 import com.denghb.log.LogFactory;
 import com.denghb.utils.ConfigUtils;
@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class Forest {
+public class Config {
 
     private static Log log = LogFactory.getLog(Application.class);
 
@@ -39,7 +39,7 @@ public class Forest {
 
     private static Object buildService(Class interfaceClass) {
 
-        Object object = BeanFactory.getBean(interfaceClass);
+        Object object = Context.getBean(interfaceClass);
         if (null != object) {
             return object;
         }
@@ -47,14 +47,14 @@ public class Forest {
         if (interfaceClass == Eorm.class) {
 
             // TODO 数据库实例化
-            String impl = ConfigUtils.getValue("eorm.impl", "com.denghb.eorm.impl.EormMySQLImpl");
+            String impl = ConfigUtils.getValue("eorm.impl", MySQLEormImpl.class.getName());
             Class implClass = ReflectUtils.loadClass(impl);
             Object eorm = ReflectUtils.constructorInstance(implClass);
-            BeanFactory.setBean(Eorm.class, (Eorm) eorm);
+            Context.setBean(Eorm.class, (Eorm) eorm);
 
-            EormTxManager.url = ConfigUtils.getValue("eorm.url");
-            EormTxManager.username = ConfigUtils.getValue("eorm.username");
-            EormTxManager.password = ConfigUtils.getValue("eorm.password");
+            EormDataSource.Config.url = ConfigUtils.getValue("eorm.url");
+            EormDataSource.Config.username = ConfigUtils.getValue("eorm.username");
+            EormDataSource.Config.password = ConfigUtils.getValue("eorm.password");
 
             return eorm;
         }
@@ -83,16 +83,16 @@ public class Forest {
                 Round round = targetMethod.getAnnotation(Round.class);// TODO
                 try {
                     if (null != tx) {
-                        EormTxManager.begin();
+                        EormDataSource.begin();
                     }
                     Object value = method.invoke(finalTarget, args);
                     if (null != tx) {
-                        EormTxManager.commit();
+                        EormDataSource.commit();
                     }
                     return value;
                 } catch (Exception e) {
                     if (null != tx) {
-                        EormTxManager.rollback();
+                        EormDataSource.rollback();
                     }
                     if (e instanceof InvocationTargetException) {
                         InvocationTargetException ite = (InvocationTargetException) e;
@@ -102,7 +102,7 @@ public class Forest {
                 }
             }
         });
-        BeanFactory.setBean(clazz, proxy);
+        Context.setBean(clazz, proxy);
         return proxy;
     }
 
@@ -158,7 +158,7 @@ public class Forest {
         for (final Class clazz : classes) {
             final Object target = ReflectUtils.constructorInstance(clazz);
 
-            BeanFactory.setBean(clazz, target);
+            Context.setBean(clazz, target);
 
             initField(target);
 
@@ -218,7 +218,7 @@ public class Forest {
                     for (Class cl : ms) {
                         String key = cl.getSimpleName() + filter.value();
                         if (_Filter_Method.containsKey(key)) {
-                            throw new IllegalArgumentException("Duplicate @" + cl.getSimpleName() + "(\"" + filter.value() + "\")");
+                            throw new ForestException("Duplicate @" + cl.getSimpleName() + "(\"" + filter.value() + "\")");
                         }
                         _Filter_Method.put(key, new MethodModel(method));
                     }
@@ -232,7 +232,7 @@ public class Forest {
 
                         String key = cl.getSimpleName() + before.value();
                         if (_Before_Method.containsKey(key)) {
-                            throw new IllegalArgumentException("Duplicate @" + cl.getSimpleName() + "(\"" + before.value() + "\")");
+                            throw new ForestException("Duplicate @" + cl.getSimpleName() + "(\"" + before.value() + "\")");
                         }
                         _Before_Method.put(key, new MethodModel(method));
                     }
@@ -246,7 +246,7 @@ public class Forest {
 
                         String key = cl.getSimpleName() + after.value();
                         if (_After_Method.containsKey(key)) {
-                            throw new IllegalArgumentException("Duplicate @" + cl.getSimpleName() + "(\"" + after.value() + "\")");
+                            throw new ForestException("Duplicate @" + cl.getSimpleName() + "(\"" + after.value() + "\")");
                         }
                         _After_Method.put(key, new MethodModel(method));
                     }
@@ -267,7 +267,7 @@ public class Forest {
 
         String key = method + path;
         if (_RESTful_Method.containsKey(key)) {
-            throw new IllegalArgumentException("Duplicate @" + method + "(\"" + path + "\")");
+            throw new ForestException("Duplicate @" + method + "(\"" + path + "\")");
         }
         _RESTful_Method.put(key, info);
     }

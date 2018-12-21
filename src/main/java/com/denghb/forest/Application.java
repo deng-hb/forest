@@ -44,12 +44,12 @@ public class Application {
         final boolean debug = "true".equals(ConfigUtils.getValue("debug"));
 
         if (debug) {
-            log.info("Forest debug starting ...");
+            log.info("Config debug starting ...");
         } else {
-            log.info("Forest starting ...");
+            log.info("Config starting ...");
         }
 
-        Forest.init(clazz);
+        Config.init(clazz);
 
         String port1 = ConfigUtils.getValue("port");
         if (null != port1) {
@@ -62,11 +62,11 @@ public class Application {
             }
         }));
 
-        log.info("Forest started ⚡ " + (System.currentTimeMillis() - start) / 1000.0 + "s");
+        log.info("Config started ⚡ " + (System.currentTimeMillis() - start) / 1000.0 + "s");
 
 
         // 在start之前
-        _SERVER.setHandler(new Handler(log, debug));
+        _SERVER.setHandler(new RESTfulHandler(log, debug));
         _SERVER.start(port);
 
     }
@@ -75,7 +75,7 @@ public class Application {
      * 停止服务
      */
     public static void stop() {
-        log.info("Forest shutdown");
+        log.info("Config shutdown");
         if (null != _SERVER) {
             _SERVER.shutdown();
             _SERVER = null;

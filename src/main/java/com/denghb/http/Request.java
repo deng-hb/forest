@@ -2,7 +2,7 @@ package com.denghb.http;
 
 import com.denghb.json.JSON;
 
-import java.io.*;
+import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
@@ -202,13 +202,20 @@ public class Request {
             String key = string.substring(0, string.indexOf("="));
             String value = string.substring(string.indexOf("=") + 1);
 
-            try {
-                value = URLDecoder.decode(value, "utf-8");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            key = decode(key);
+            value = decode(value);
             this.parameters.put(key, value.trim());
         }
+    }
+
+    private String decode(String value) {
+
+        try {
+            value = URLDecoder.decode(value, "utf-8");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return value;
     }
 
     public Map<String, MultipartFile> getMultipartFileMap() {

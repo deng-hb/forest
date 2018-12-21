@@ -74,7 +74,10 @@ public class JSON {
                 sb.append('"');
                 // fix 换行符
                 String str = (String) object;
-                sb.append(str.replaceAll("\\n", "\\\\n"));
+                str = str.replaceAll("\\t", "\\\\t");
+                str = str.replaceAll("\\r", "\\\\r");
+                str = str.replaceAll("\\n", "\\\\n");
+                sb.append(str);
                 sb.append('"');
             } else if (object instanceof Number || object instanceof Boolean) {
                 sb.append(object);

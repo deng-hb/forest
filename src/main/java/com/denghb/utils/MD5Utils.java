@@ -1,5 +1,6 @@
 package com.denghb.utils;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
@@ -7,10 +8,14 @@ import java.security.MessageDigest;
 public class MD5Utils {
 
     public static String file(String filePath) {
+        return file(new File(filePath));
+    }
+
+    public static String file(File file) {
         FileInputStream fis = null;
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
-            fis = new FileInputStream(filePath);
+            fis = new FileInputStream(file);
 
             byte[] dataBytes = new byte[1024];
 
@@ -44,8 +49,7 @@ public class MD5Utils {
     }
 
     public static String text(String text) {
-        bytes(text.getBytes());
-        return null;
+        return bytes(text.getBytes());
     }
 
     public static String bytes(byte[] bytes) {

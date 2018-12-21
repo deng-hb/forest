@@ -1,6 +1,5 @@
 package com.denghb.forest;
 
-import com.denghb.forest.annotation.PathVariable;
 import com.denghb.forest.annotation.RequestBody;
 import com.denghb.forest.annotation.RequestHeader;
 import com.denghb.forest.annotation.RequestParameter;
@@ -8,10 +7,9 @@ import com.denghb.forest.model.ForestModel;
 import com.denghb.forest.model.MethodModel;
 import com.denghb.forest.model.ParameterModel;
 import com.denghb.forest.model.RestModel;
+import com.denghb.forest.utils.PathCompareUtils;
 import com.denghb.http.Request;
 import com.denghb.http.Response;
-import com.denghb.forest.utils.BeanFactory;
-import com.denghb.forest.utils.PathCompareUtils;
 import com.denghb.json.JSON;
 import com.denghb.log.Log;
 import com.denghb.utils.DateUtils;
@@ -23,17 +21,15 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-public class Handler implements com.denghb.http.Handler {
+public class RESTfulHandler implements com.denghb.http.Handler {
 
     private Log log;
 
     private boolean debug;
 
-    public Handler(Log log, boolean debug) {
+    public RESTfulHandler(Log log, boolean debug) {
         this.log = log;
         this.debug = debug;
     }
@@ -51,7 +47,7 @@ public class Handler implements com.denghb.http.Handler {
             forest.setRest(list);
 
             RestModel rest;
-            for (String path : Forest._RESTful_Method.keySet()) {
+            for (String path : Config._RESTful_Method.keySet()) {
                 String method = path.substring(0, path.indexOf("/"));
                 path = path.substring(path.indexOf("/"));
                 rest = new RestModel();
@@ -70,19 +66,9 @@ public class Handler implements com.denghb.http.Handler {
         }
 
         String path = request.getMethod() + uri;
-        MethodModel methodModel = Forest._RESTful_Method.get(path);
-        Map<String, String> pathVariables = new HashMap<String, String>();
+        MethodModel methodModel = Config._RESTful_Method.get(path);
 
         if (null == methodModel) {
-            // 参数在path上的匹配
-            for (String path1 : Forest._RESTful_Method.keySet()) {
-                PathCompareUtils.buildPath(path1, path, pathVariables);
-                if (!pathVariables.isEmpty()) {
-                    methodModel = Forest._RESTful_Method.get(path1);
-                    break;
-                }
-            }
-
             // 文件匹配
             URL url = this.getClass().getResource("/static" + uri);
             if (null == url && uri.equals("/favicon.ico")) {
@@ -96,28 +82,21 @@ public class Handler implements com.denghb.http.Handler {
                 }
             }
 
-            if (pathVariables.isEmpty()) {
-                Object result = handlerError(new ForestException("404 Not Found[" + path + "]", 404));
-                if (null != result) {
-                    return Response.build(result);
-                }
-                return Response.buildError(404);
-            }
         }
 
         try {
 
-            Object target = BeanFactory.getBean(methodModel.getClazz());
+            Object target = Context.getBean(methodModel.getClazz());
 
             // 执行path对应方法
             Method method = methodModel.getMethod();
             method.setAccessible(true);
 
-            Object result = handlerBefore(request, pathVariables);
+            Object result = handlerBefore(request);
             if (null == result) {
-                result = method.invoke(target, buildParams(methodModel, request, pathVariables));
+                result = method.invoke(target, buildParams(methodModel, request));
             }
-            result = handlerAfter(request, result, pathVariables);
+            result = handlerAfter(request, result);
 
             return Response.build(result);
         } catch (InvocationTargetException e) {
@@ -140,16 +119,16 @@ public class Handler implements com.denghb.http.Handler {
         return Response.buildError(500);
     }
 
-    private Object handlerBefore(Request request, Map<String, String> pathVariables) {
+    private Object handlerBefore(Request request) {
 
         try {
             String key = request.getMethod() + request.getUri();
 
             MethodModel methodModel = null;
-            for (String key1 : Forest._Before_Method.keySet()) {
+            for (String key1 : Config._Before_Method.keySet()) {
                 boolean b = PathCompareUtils.comparePath(key1, key);
                 if (b) {
-                    methodModel = Forest._Before_Method.get(key1);
+                    methodModel = Config._Before_Method.get(key1);
                     break;
                 }
 
@@ -158,8 +137,8 @@ public class Handler implements com.denghb.http.Handler {
                 return null;
             }
 
-            Object target = BeanFactory.getBean(methodModel.getClazz());
-            Object[] ps = buildParams(methodModel, request, pathVariables);
+            Object target = Context.getBean(methodModel.getClazz());
+            Object[] ps = buildParams(methodModel, request);
 
             Method method = methodModel.getMethod();
             method.setAccessible(true);
@@ -172,15 +151,15 @@ public class Handler implements com.denghb.http.Handler {
         return null;
     }
 
-    private Object handlerAfter(Request request, Object result, Map<String, String> pathVariables) {
+    private Object handlerAfter(Request request, Object result) {
         try {
             String key = request.getMethod() + request.getUri();
 
             MethodModel methodModel = null;
-            for (String temp : Forest._After_Method.keySet()) {
+            for (String temp : Config._After_Method.keySet()) {
                 boolean b = PathCompareUtils.comparePath(temp, key);
                 if (b) {
-                    methodModel = Forest._After_Method.get(temp);
+                    methodModel = Config._After_Method.get(temp);
                     break;
                 }
 
@@ -189,10 +168,10 @@ public class Handler implements com.denghb.http.Handler {
                 return result;
             }
 
-            Object target = BeanFactory.getBean(methodModel.getClazz());
+            Object target = Context.getBean(methodModel.getClazz());
 
 
-            Object[] ps = buildParams(methodModel, request, pathVariables);
+            Object[] ps = buildParams(methodModel, request);
 
             // TODO 返回值赋值
             for (int i = 0; i < ps.length; i++) {
@@ -223,10 +202,10 @@ public class Handler implements com.denghb.http.Handler {
             String key = request.getMethod() + request.getUri();
 
             MethodModel methodModel = null;
-            for (String key1 : Forest._Filter_Method.keySet()) {
+            for (String key1 : Config._Filter_Method.keySet()) {
                 boolean b = PathCompareUtils.comparePath(key1, key);
                 if (b) {
-                    methodModel = Forest._Filter_Method.get(key1);
+                    methodModel = Config._Filter_Method.get(key1);
                     break;
                 }
 
@@ -235,8 +214,8 @@ public class Handler implements com.denghb.http.Handler {
                 return null;
             }
 
-            Object target = BeanFactory.getBean(methodModel.getClazz());
-            Object[] ps = buildParams(methodModel, request, null);
+            Object target = Context.getBean(methodModel.getClazz());
+            Object[] ps = buildParams(methodModel, request);
 
             Method method = methodModel.getMethod();
             method.setAccessible(true);
@@ -253,7 +232,7 @@ public class Handler implements com.denghb.http.Handler {
     /**
      * 参数列表赋值
      */
-    private Object[] buildParams(MethodModel model, Request request, Map<String, String> pathVariables) {
+    private Object[] buildParams(MethodModel model, Request request) {
 
         // 参数赋值
         int pcount = model.getParameters().size();
@@ -271,9 +250,6 @@ public class Handler implements com.denghb.http.Handler {
             if (a instanceof RequestParameter) {
                 String name = ((RequestParameter) a).value();
                 value = request.getParameters().get(name);
-            } else if (a instanceof PathVariable) {
-                String name = ((PathVariable) a).value();
-                value = pathVariables.get(name);
             } else if (a instanceof RequestHeader) {
                 String name = ((RequestHeader) a).value();
                 value = request.getHeaders().get(name);
@@ -311,14 +287,14 @@ public class Handler implements com.denghb.http.Handler {
 
         Class ec = e.getClass();
         // 先找异常一样的
-        MethodModel methodModel = Forest._Exception_Method.get(ec);
+        MethodModel methodModel = Config._Exception_Method.get(ec);
         if (null != methodModel) {
             return doHandlerError(e, methodModel);
         }
         // 找父类
-        for (Class clazz : Forest._Exception_Method.keySet()) {
+        for (Class clazz : Config._Exception_Method.keySet()) {
             if (clazz.isAssignableFrom(ec)) {
-                return doHandlerError(e, Forest._Exception_Method.get(clazz));
+                return doHandlerError(e, Config._Exception_Method.get(clazz));
             }
         }
         return null;
@@ -329,7 +305,7 @@ public class Handler implements com.denghb.http.Handler {
         try {
             // TODO 子类异常
 
-            Object target = BeanFactory.getBean(methodModel.getClazz());
+            Object target = Context.getBean(methodModel.getClazz());
 
             // 参数赋值
             int pcount = methodModel.getParameters().size();

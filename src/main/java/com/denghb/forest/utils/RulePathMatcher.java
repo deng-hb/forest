@@ -20,6 +20,9 @@ public class RulePathMatcher {
 //        urls.add("/a/a,/a/,0");
         urls.add("/a/a**,/a/a,1");
         urls.add("/a/a*,/a/a,1");
+        urls.add("/**.jpgc,/aba.jpg,0");
+        urls.add("/**.jpg,/a/a.jpg,1");
+        urls.add("/{a},/a,1");
 
         int i = 0;
         Map<String, String> var = new HashMap<String, String>();

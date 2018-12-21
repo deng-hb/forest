@@ -4,6 +4,7 @@ import com.denghb.eorm.domain.Paging;
 import com.denghb.eorm.domain.PagingResult;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Easy ROM
@@ -22,24 +23,23 @@ public interface Eorm {
     public int execute(String sql, Object... args);
 
     /**
-     * 执行一条查询
-     *
-     * @param clazz
-     * @param sql
-     * @param args
-     * @param <T>
-     * @return
-     */
-    public <T> List<T> select(Class<T> clazz, String sql, Object... args);
-
-    /**
      * 插入一个对象
      *
      * @param domain
      * @param <T>
      * @return
      */
-    public <T> int insert(T domain);
+    public <T> void insert(T domain);
+
+
+    /**
+     * 批量插入
+     *
+     * @param list
+     * @param <T>
+     * @return
+     */
+    public <T> void insert(List<T> list);
 
     /**
      * 修改一个对象
@@ -48,7 +48,7 @@ public interface Eorm {
      * @param <T>
      * @return
      */
-    public <T> int update(T domain);
+    public <T> void update(T domain);
 
     /**
      * 删除一个对象
@@ -57,7 +57,7 @@ public interface Eorm {
      * @param <T>
      * @return
      */
-    public <T> int delete(T domain);
+    public <T> void delete(T domain);
 
 
     /**
@@ -68,7 +68,16 @@ public interface Eorm {
      * @param <T>
      * @return
      */
-    public <T> int delete(Class<T> clazz, Object... ids);
+    public <T> void delete(Class<T> clazz, Object... ids);
+
+    /**
+     * 执行一条查询
+     *
+     * @param sql
+     * @param args
+     * @return
+     */
+    public List<Map<String, Object>> selectMap(String sql, Object... args);
 
     /**
      * 查询一个对象
@@ -92,13 +101,15 @@ public interface Eorm {
     public <T> T selectByPrimaryKey(Class<T> clazz, Object... args);
 
     /**
-     * 批量插入
+     * 执行一条查询
      *
-     * @param list
+     * @param clazz
+     * @param sql
+     * @param args
      * @param <T>
      * @return
      */
-    public <T> int batchInsert(List<T> list);
+    public <T> List<T> selectList(Class<T> clazz, String sql, Object... args);
 
     /**
      * 分页查询
@@ -109,6 +120,7 @@ public interface Eorm {
      * @param <T>
      * @return
      */
-    public <T> PagingResult<T> page(Class<T> clazz, StringBuffer sql, Paging paging);
+    public <T> PagingResult<T> selectPage(Class<T> clazz, StringBuffer sql, Paging paging);
+
 
 }

@@ -25,7 +25,7 @@ public abstract class Paging implements Serializable {
     /**
      * 每页数量
      */
-    private long rows = 20;
+    private long pageSize = 20;
 
     /**
      * 总页数
@@ -35,7 +35,12 @@ public abstract class Paging implements Serializable {
     /**
      * 开始
      */
-    private long start = 0;
+    private long start;
+
+    /**
+     * 整条SQL 统计数量
+     */
+    private boolean fullPage = false;
 
     /**
      * 是否排序
@@ -69,9 +74,9 @@ public abstract class Paging implements Serializable {
     public void setTotal(long total) {
         this.total = total;
 
-        if (0 != total && 0 != rows) {
-            totalPage = total / rows;
-            if (total % rows != 0) {
+        if (0 != total && 0 != pageSize) {
+            totalPage = total / pageSize;
+            if (total % pageSize != 0) {
                 totalPage++;
             }
         }
@@ -86,12 +91,12 @@ public abstract class Paging implements Serializable {
         this.page = page;
     }
 
-    public long getRows() {
-        return rows;
+    public long getPageSize() {
+        return pageSize;
     }
 
-    public void setRows(long rows) {
-        this.rows = rows;
+    public void setPageSize(long pageSize) {
+        this.pageSize = pageSize;
     }
 
     public long getTotalPage() {
@@ -104,7 +109,6 @@ public abstract class Paging implements Serializable {
 
     /**
      * 设置需要排序的数据库字段
-     *
      */
     public abstract String[] getSorts();
 
@@ -145,17 +149,36 @@ public abstract class Paging implements Serializable {
     }
 
     public long getStart() {
-        return (page - 1) * rows;
+        return (page - 1) * pageSize;
     }
 
     public void setStart(long start) {
         this.start = start;
     }
 
-    @Override
-    public String toString() {
-        return "Paging [total=" + total + ", page=" + page + ", rows=" + rows + ", totalPage=" + totalPage + ", sorts="
-                + Arrays.toString(sorts) + ", desc=" + desc + ", params=" + params + "]";
+
+    public boolean isFullPage() {
+        return fullPage;
     }
 
+    public void setFullPage(boolean fullPage) {
+        this.fullPage = fullPage;
+    }
+
+    @Override
+    public String toString() {
+        return "Paging{" +
+                "total=" + total +
+                ", page=" + page +
+                ", pageSize=" + pageSize +
+                ", totalPage=" + totalPage +
+                ", start=" + start +
+                ", fullPage=" + fullPage +
+                ", isSort=" + isSort +
+                ", sorts=" + Arrays.toString(sorts) +
+                ", sortIndex=" + sortIndex +
+                ", desc=" + desc +
+                ", params=" + params +
+                '}';
+    }
 }

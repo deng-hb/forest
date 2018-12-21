@@ -1,4 +1,4 @@
-package com.denghb.test.forest.v2;
+package com.denghb.test.v2;
 
 import com.denghb.eorm.Eorm;
 import com.denghb.forest.Application;
